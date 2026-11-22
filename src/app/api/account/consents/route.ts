@@ -1,101 +1,51 @@
 import { NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
-import { getCollections, serializeDoc } from "@/lib/mongodb";
-import { fetchSupportGuildResources } from "@/lib/discord";
+import { getCollections, serializeDoc, userIdFilter } from "@/lib/mongodb";
 
-export async function GET(req: Request) {
+export async function GET() {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
-    return NextResponse.json(
-      { error: "Only the Hub Owner can view or edit Hub Settings." },
-      { status: 403 }
-    );
-  }
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const forceRefresh = searchParams.get("refresh") === "1";
-
-  const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
-  const { guildSettings, logs } = await getCollections();
-  const [settings, recentLogs, resources] = await Promise.all([
-    guildSettings.findOne({ guild_id: supportGuildId }),
-    logs.find({}).sort({ created_at: -1 }).limit(60).toArray(),
-    fetchSupportGuildResources(forceRefresh),
-  ]);
+  const { oauthConsents, oauthClients } = await getCollections();
+  const consents = await oauthConsents
+    .find({ userId: userIdFilter(ctx.userId) })
+    .toArray();
+  const clientIds = consents.map((c) => c.clientId);
+  const clients = await oauthClients
+    .find({ clientId: { $in: clientIds } })
+    .toArray();
+  const clientMap = new Map(clients.map((c) => [String(c.clientId), c]));
 
   return NextResponse.json({
-    supportGuildId,
-    supportGuildName: resources.guildName,
-    roles: resources.roles,
-    channels: resources.channels,
-    settings: settings ? serializeDoc(settings) : { guild_id: supportGuildId },
-    logs: recentLogs.map((l) => serializeDoc(l)),
+    consents: consents.map((c) => {
+      const client = clientMap.get(String(c.clientId));
+      return serializeDoc({
+        id: c.id || c._id,
+        clientId: c.clientId,
+        clientName: client?.name || c.clientId,
+        clientUri: client?.uri || null,
+        scopes: c.scopes || [],
+        createdAt: c.createdAt || null,
+      });
+    }),
   });
 }
 
-export async function PUT(req: Request) {
+export async function DELETE(req: Request) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { searchParams } = new URL(req.url);
+  const clientId = searchParams.get("clientId");
+  if (!clientId) {
     return NextResponse.json(
-      { error: "Only the Hub Owner can update Hub Settings." },
-      { status: 403 }
-    );
-  }
-
-  const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
-  if (!supportGuildId) {
-    return NextResponse.json(
-      { error: "HUB_SUPPORT_GUILD_ID not set." },
+      { error: "clientId is required." },
       { status: 400 }
     );
   }
-
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const allowedArrayFields = [
-    "moderator_role_ids",
-    "manager_role_ids",
-    "approval_role_ids",
-    "notification_role_ids",
-    "blacklisted_role_ids",
-  ];
-  const allowedStringFields = [
-    "licensed_owner_role_id",
-    "logs_channel_id",
-    "pending_channel_id",
-    "approved_channel_id",
-    "rejected_channel_id",
-    "list_channel_id",
-    "announcement_log_channel_id",
-    "status_board_channel_id",
-  ];
-
-  const payload: Record<string, unknown> = {
-    guild_id: supportGuildId,
-    updated_at: new Date(),
-    updated_by: ctx.discordId,
-  };
-
-  for (const field of allowedArrayFields) {
-    if (Array.isArray(body[field])) {
-      const cleaned = (body[field] as string[])
-        .map((v) => String(v).trim())
-        .filter((v) => /^\d{17,20}$/.test(v));
-      payload[field] = Array.from(new Set(cleaned));
-    }
-  }
-  for (const field of allowedStringFields) {
-    if (field in body) {
-      const val = String(body[field] || "").trim();
-      payload[field] = /^\d{17,20}$/.test(val) ? val : null;
-    }
-  }
-
-  const { guildSettings } = await getCollections();
-  await guildSettings.updateOne(
-    { guild_id: supportGuildId },
-    { $set: payload },
-    { upsert: true }
-  );
-
+  const { oauthConsents } = await getCollections();
+  await oauthConsents.deleteMany({
+    userId: userIdFilter(ctx.userId),
+    clientId,
+  });
   return NextResponse.json({ ok: true });
 }
