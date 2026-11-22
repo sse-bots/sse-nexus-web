@@ -20,8 +20,11 @@ export async function PATCH(
   context: { params: Promise<{ activationId: string }> }
 ) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
-    return NextResponse.json({ error: "Only Hub owner can edit bots." }, { status: 403 });
+  if (!ctx || !ctx.isAdmin) {
+    return NextResponse.json(
+      { error: "Only Support Server Admins and the Hub Owner can edit bots." },
+      { status: 403 }
+    );
   }
   const { activationId } = await context.params;
   const body = await req.json().catch(() => null);
@@ -79,8 +82,11 @@ export async function DELETE(
   context: { params: Promise<{ activationId: string }> }
 ) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
-    return NextResponse.json({ error: "Only Hub owner can disable bots." }, { status: 403 });
+  if (!ctx || !ctx.isAdmin) {
+    return NextResponse.json(
+      { error: "Only Support Server Admins and the Hub Owner can disable bots." },
+      { status: 403 }
+    );
   }
   const { activationId } = await context.params;
   const { bots, keys, servers } = await getCollections();
