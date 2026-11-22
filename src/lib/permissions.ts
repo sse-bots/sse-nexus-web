@@ -22,9 +22,8 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   if (!session?.user) return null;
 
   const { authAccounts, guildSettings } = await getCollections();
-  let discordId = String(
-    (session.user as Record<string, unknown>).discordId || ""
-  ).trim();
+  const userRecord = session.user as unknown as Record<string, unknown>;
+  let discordId = String(userRecord.discordId || "").trim();
 
   if (!discordId) {
     const acc = await authAccounts.findOne({
