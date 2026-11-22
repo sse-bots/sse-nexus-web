@@ -1,4 +1,4 @@
-import { getCollections } from "./mongodb";
+import { getCollections, userIdFilter } from "./mongodb";
 
 const DISCORD_API = "https://discord.com/api/v10";
 
@@ -33,14 +33,42 @@ export function hasManageGuild(permissions: string, isOwner: boolean): boolean {
   }
 }
 
-export function guildIconUrl(guildId: string, icon: string | null): string | null {
-  if (!icon) return null;
-  const ext = icon.startsWith("a_") ? "gif" : "png";
-  return `https://cdn.discordapp.com/icons/${guildId}/${icon}.${ext}?size=128`;
+export function hasAdminPermission(permissions: string): boolean {
+  try {
+    const bits = BigInt(permissions || "0");
+    return (bits & ADMINISTRATOR_BIT) === ADMINISTRATOR_BIT;
+  } catch {
+    return false;
+  }
 }
 
-// Simple in-memory cache (60s) to avoid Discord rate limits on bot guild lookups
+export function buildNexusInviteUrl(guildId?: string): string {
+  const configured = (process.env.NEXT_PUBLIC_NEXUS_INVITE_URL || "").trim();
+  const clientId = (process.env.DISCORD_CLIENT_ID || "").trim();
+  const base =
+    configured ||
+    (clientId
+      ? `https://discord.com/oauth2/authorize?client_id=${clientId}&scope=bot%20applications.commands&permissions=8`
+      : "https://discord.com/oauth2/authorize");
+
+  if (!guildId) return base;
+  try {
+    const url = new URL(base);
+    url.searchParams.set("guild_id", guildId);
+    url.searchParams.set("disable_guild_select", "true");
+    return url.toString();
+  } catch {
+    const sep = base.includes("?") ? "&" : "?";
+    return `${base}${sep}guild_id=${guildId}&disable_guild_select=true`;
+  }
+}
+
 let botGuildsCache: { ids: Set<string>; expiresAt: number } | null = null;
+let supportGuildMetaCache: {
+  ownerId: string | null;
+  adminRoleIds: Set<string>;
+  expiresAt: number;
+} | null = null;
 
 async function fetchBotGuildIdsFromDiscord(token: string): Promise<Set<string>> {
   const ids = new Set<string>();
@@ -63,21 +91,17 @@ async function fetchBotGuildIdsFromDiscord(token: string): Promise<Set<string>> 
   return ids;
 }
 
-/**
- * Returns the set of Discord guild IDs where SSE Nexus (or Hub bot) is present.
- * Combines:
- * 1. MongoDB `bot_installations` for NEXUS_ACTIVATION_ID (or bots named Nexus / Hub)
- * 2. Live Discord Bot API guild list from NEXUS_DISCORD_TOKEN or HUB_DISCORD_TOKEN
- */
-export async function getNexusPresentGuildIds(): Promise<Set<string>> {
-  if (botGuildsCache && Date.now() < botGuildsCache.expiresAt) {
+export async function getNexusPresentGuildIds(
+  forceRefresh = false
+): Promise<Set<string>> {
+  if (!forceRefresh && botGuildsCache && Date.now() < botGuildsCache.expiresAt) {
     return new Set(botGuildsCache.ids);
   }
 
   const ids = new Set<string>();
   const { botInstallations, bots } = await getCollections();
 
-  // 1. MongoDB bot_installations lookup for Nexus
+  // 1. Check MongoDB bot_installations
   const nexusActivationId = (process.env.NEXUS_ACTIVATION_ID || "").trim();
   const activationIdsToCheck: string[] = [];
 
@@ -86,10 +110,7 @@ export async function getNexusPresentGuildIds(): Promise<Set<string>> {
   } else {
     const nexusBots = await bots
       .find(
-        {
-          status: "active",
-          name: { $regex: /nexus/i },
-        },
+        { status: "active", name: { $regex: /nexus/i } },
         { projection: { activation_id: 1 } }
       )
       .toArray();
@@ -101,10 +122,7 @@ export async function getNexusPresentGuildIds(): Promise<Set<string>> {
   if (activationIdsToCheck.length > 0) {
     const installs = await botInstallations
       .find(
-        {
-          bot_activation_id: { $in: activationIdsToCheck },
-          status: "active",
-        },
+        { bot_activation_id: { $in: activationIdsToCheck }, status: "active" },
         { projection: { guild_id: 1 } }
       )
       .toArray();
@@ -113,10 +131,10 @@ export async function getNexusPresentGuildIds(): Promise<Set<string>> {
     }
   }
 
-  // 2. Discord Bot API check (prefer NEXUS_DISCORD_TOKEN, fallback to HUB_DISCORD_TOKEN)
-  const nexusToken = (process.env.NEXUS_DISCORD_TOKEN || "").trim();
-  const hubToken = (process.env.HUB_DISCORD_TOKEN || "").trim();
-  const tokenToUse = nexusToken || hubToken;
+  // 2. Check live Discord Bot API guild list (prefer NEXUS_DISCORD_TOKEN, fallback HUB_DISCORD_TOKEN)
+  const tokenToUse =
+    (process.env.NEXUS_DISCORD_TOKEN || "").trim() ||
+    (process.env.HUB_DISCORD_TOKEN || "").trim();
 
   if (tokenToUse) {
     try {
@@ -127,17 +145,16 @@ export async function getNexusPresentGuildIds(): Promise<Set<string>> {
     }
   }
 
-  botGuildsCache = { ids, expiresAt: Date.now() + 60_000 };
+  botGuildsCache = { ids, expiresAt: Date.now() + 30_000 };
   return new Set(ids);
 }
 
-/**
- * Refresh the user's Discord OAuth access token if expired, then fetch their Discord guilds.
- */
-async function getValidUserDiscordAccessToken(userId: string): Promise<string | null> {
+async function getValidUserDiscordAccessToken(
+  userId: string
+): Promise<string | null> {
   const { authAccounts } = await getCollections();
   const account = await authAccounts.findOne({
-    userId,
+    userId: userIdFilter(userId),
     providerId: "discord",
   });
   if (!account) return null;
@@ -152,7 +169,11 @@ async function getValidUserDiscordAccessToken(userId: string): Promise<string | 
     return accessToken;
   }
 
-  if (!refreshToken || !process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
+  if (
+    !refreshToken ||
+    !process.env.DISCORD_CLIENT_ID ||
+    !process.env.DISCORD_CLIENT_SECRET
+  ) {
     return accessToken || null;
   }
 
@@ -181,7 +202,9 @@ async function getValidUserDiscordAccessToken(userId: string): Promise<string | 
         $set: {
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token || refreshToken,
-          accessTokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+          accessTokenExpiresAt: new Date(
+            Date.now() + tokenData.expires_in * 1000
+          ),
           updatedAt: new Date(),
         },
       }
@@ -192,7 +215,9 @@ async function getValidUserDiscordAccessToken(userId: string): Promise<string | 
   }
 }
 
-export async function fetchUserDiscordGuilds(userId: string): Promise<RawDiscordGuild[]> {
+export async function fetchUserDiscordGuilds(
+  userId: string
+): Promise<RawDiscordGuild[]> {
   const token = await getValidUserDiscordAccessToken(userId);
   if (!token) return [];
   const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
@@ -204,27 +229,91 @@ export async function fetchUserDiscordGuilds(userId: string): Promise<RawDiscord
   return Array.isArray(data) ? (data as RawDiscordGuild[]) : [];
 }
 
-export async function fetchSupportMemberRoles(discordUserId: string): Promise<string[]> {
+async function getSupportGuildMeta(): Promise<{
+  ownerId: string | null;
+  adminRoleIds: Set<string>;
+}> {
+  if (supportGuildMetaCache && Date.now() < supportGuildMetaCache.expiresAt) {
+    return supportGuildMetaCache;
+  }
+
   const token = (process.env.HUB_DISCORD_TOKEN || "").trim();
   const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
-  if (!token || !supportGuildId || !discordUserId) return [];
+  const empty = { ownerId: null, adminRoleIds: new Set<string>() };
+  if (!token || !supportGuildId) return empty;
+
   try {
-    const res = await fetch(
-      `${DISCORD_API}/guilds/${supportGuildId}/members/${discordUserId}`,
-      {
-        headers: { Authorization: `Bot ${token}` },
-        cache: "no-store",
+    const res = await fetch(`${DISCORD_API}/guilds/${supportGuildId}`, {
+      headers: { Authorization: `Bot ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return empty;
+    const guild = (await res.json()) as {
+      owner_id?: string;
+      roles?: Array<{ id: string; permissions: string }>;
+    };
+    const adminRoleIds = new Set<string>();
+    for (const role of guild.roles || []) {
+      if (hasAdminPermission(role.permissions)) {
+        adminRoleIds.add(String(role.id));
       }
-    );
-    if (!res.ok) return [];
-    const data = (await res.json()) as { roles?: string[] };
-    return Array.isArray(data.roles) ? data.roles.map(String) : [];
+    }
+    const meta = {
+      ownerId: guild.owner_id ? String(guild.owner_id) : null,
+      adminRoleIds,
+      expiresAt: Date.now() + 60_000,
+    };
+    supportGuildMetaCache = meta;
+    return meta;
   } catch {
-    return [];
+    return empty;
   }
 }
 
-export async function fetchGuildTextChannels(guildId: string): Promise<DiscordTextChannel[]> {
+export async function fetchSupportMemberAccess(discordUserId: string): Promise<{
+  roles: string[];
+  isSupportAdmin: boolean;
+}> {
+  const token = (process.env.HUB_DISCORD_TOKEN || "").trim();
+  const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
+  if (!token || !supportGuildId || !discordUserId) {
+    return { roles: [], isSupportAdmin: false };
+  }
+
+  try {
+    const [memberRes, guildMeta] = await Promise.all([
+      fetch(
+        `${DISCORD_API}/guilds/${supportGuildId}/members/${discordUserId}`,
+        {
+          headers: { Authorization: `Bot ${token}` },
+          cache: "no-store",
+        }
+      ),
+      getSupportGuildMeta(),
+    ]);
+
+    if (!memberRes.ok) {
+      return {
+        roles: [],
+        isSupportAdmin: guildMeta.ownerId === discordUserId,
+      };
+    }
+
+    const member = (await memberRes.json()) as { roles?: string[] };
+    const roles = Array.isArray(member.roles) ? member.roles.map(String) : [];
+    const isSupportAdmin =
+      guildMeta.ownerId === discordUserId ||
+      roles.some((rid) => guildMeta.adminRoleIds.has(rid));
+
+    return { roles, isSupportAdmin };
+  } catch {
+    return { roles: [], isSupportAdmin: false };
+  }
+}
+
+export async function fetchGuildTextChannels(
+  guildId: string
+): Promise<DiscordTextChannel[]> {
   const token =
     (process.env.HUB_DISCORD_TOKEN || "").trim() ||
     (process.env.NEXUS_DISCORD_TOKEN || "").trim();
@@ -237,7 +326,6 @@ export async function fetchGuildTextChannels(guildId: string): Promise<DiscordTe
     if (!res.ok) return [];
     const data = (await res.json()) as DiscordTextChannel[];
     if (!Array.isArray(data)) return [];
-    // Type 0 = GUILD_TEXT, Type 5 = GUILD_ANNOUNCEMENT
     return data
       .filter((ch) => ch.type === 0 || ch.type === 5)
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
