@@ -37,6 +37,7 @@ export async function GET() {
     activeServers,
     oauthClientCount,
     scheduledAnnouncements,
+    isAdmin: ctx.isAdmin,
     isOwner: ctx.isOwner,
   });
 }
