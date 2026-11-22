@@ -37,7 +37,6 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     });
     if (acc?.accountId) {
       discordId = String(acc.accountId);
-      // Backfill onto the Better Auth user document so OAuth / profile always has it
       await authUsers
         .updateOne(
           { _id: userIdFilter(session.user.id) },

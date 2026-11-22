@@ -17,6 +17,22 @@ export interface DiscordTextChannel {
   position?: number;
 }
 
+export interface DiscordRoleOption {
+  id: string;
+  name: string;
+  color: number;
+  position: number;
+  managed: boolean;
+}
+
+export interface DiscordChannelOption {
+  id: string;
+  name: string;
+  type: number;
+  position: number;
+  categoryName: string | null;
+}
+
 const MANAGE_GUILD_BIT = BigInt(0x20);
 const ADMINISTRATOR_BIT = BigInt(0x8);
 
@@ -67,6 +83,12 @@ let botGuildsCache: { ids: Set<string>; expiresAt: number } | null = null;
 let supportGuildMetaCache: {
   ownerId: string | null;
   adminRoleIds: Set<string>;
+  expiresAt: number;
+} | null = null;
+let supportResourcesCache: {
+  guildName: string | null;
+  roles: DiscordRoleOption[];
+  channels: DiscordChannelOption[];
   expiresAt: number;
 } | null = null;
 
@@ -311,83 +333,6 @@ export async function fetchSupportMemberAccess(discordUserId: string): Promise<{
   }
 }
 
-export async function fetchGuildTextChannels(
-  guildId: string
-): Promise<DiscordTextChannel[]> {
-  const token =
-    (process.env.HUB_DISCORD_TOKEN || "").trim() ||
-    (process.env.NEXUS_DISCORD_TOKEN || "").trim();
-  if (!token) return [];
-  try {
-    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
-      headers: { Authorization: `Bot ${token}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as DiscordTextChannel[];
-    if (!Array.isArray(data)) return [];
-    return data
-      .filter((ch) => ch.type === 0 || ch.type === 5)
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-  } catch {
-    return [];
-  }
-}
-
-export async function verifyGuildOwnerViaBot(guildId: string): Promise<{
-  present: boolean;
-  ownerId: string | null;
-  name: string | null;
-}> {
-  const tokens = [
-    (process.env.NEXUS_DISCORD_TOKEN || "").trim(),
-    (process.env.HUB_DISCORD_TOKEN || "").trim(),
-  ].filter(Boolean);
-
-  for (const token of tokens) {
-    try {
-      const res = await fetch(`${DISCORD_API}/guilds/${guildId}`, {
-        headers: { Authorization: `Bot ${token}` },
-        cache: "no-store",
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { owner_id?: string; name?: string };
-        return {
-          present: true,
-          ownerId: data.owner_id ? String(data.owner_id) : null,
-          name: data.name || null,
-        };
-      }
-    } catch {
-      // try next token
-    }
-  }
-  return { present: false, ownerId: null, name: null };
-}
-
-export interface DiscordRoleOption {
-  id: string;
-  name: string;
-  color: number;
-  position: number;
-  managed: boolean;
-}
-
-export interface DiscordChannelOption {
-  id: string;
-  name: string;
-  type: number;
-  position: number;
-  categoryName: string | null;
-}
-
-let supportResourcesCache: {
-  guildName: string | null;
-  roles: DiscordRoleOption[];
-  channels: DiscordChannelOption[];
-  expiresAt: number;
-} | null = null;
-
 export async function fetchSupportGuildResources(forceRefresh = false): Promise<{
   guildName: string | null;
   roles: DiscordRoleOption[];
@@ -443,7 +388,7 @@ export async function fetchSupportGuildResources(forceRefresh = false): Promise<
 
     const roles: DiscordRoleOption[] = Array.isArray(rawRoles)
       ? rawRoles
-          .filter((r) => String(r.id) !== supportGuildId) // exclude @everyone
+          .filter((r) => String(r.id) !== supportGuildId)
           .map((r) => ({
             id: String(r.id),
             name: r.name,
@@ -514,4 +459,58 @@ export async function fetchSupportGuildResources(forceRefresh = false): Promise<
   } catch {
     return { guildName: null, roles: [], channels: [] };
   }
+}
+
+export async function fetchGuildTextChannels(
+  guildId: string
+): Promise<DiscordTextChannel[]> {
+  const token =
+    (process.env.HUB_DISCORD_TOKEN || "").trim() ||
+    (process.env.NEXUS_DISCORD_TOKEN || "").trim();
+  if (!token) return [];
+  try {
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+      headers: { Authorization: `Bot ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as DiscordTextChannel[];
+    if (!Array.isArray(data)) return [];
+    return data
+      .filter((ch) => ch.type === 0 || ch.type === 5)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  } catch {
+    return [];
+  }
+}
+
+export async function verifyGuildOwnerViaBot(guildId: string): Promise<{
+  present: boolean;
+  ownerId: string | null;
+  name: string | null;
+}> {
+  const tokens = [
+    (process.env.NEXUS_DISCORD_TOKEN || "").trim(),
+    (process.env.HUB_DISCORD_TOKEN || "").trim(),
+  ].filter(Boolean);
+
+  for (const token of tokens) {
+    try {
+      const res = await fetch(`${DISCORD_API}/guilds/${guildId}`, {
+        headers: { Authorization: `Bot ${token}` },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { owner_id?: string; name?: string };
+        return {
+          present: true,
+          ownerId: data.owner_id ? String(data.owner_id) : null,
+          name: data.name || null,
+        };
+      }
+    } catch {
+      // try next token
+    }
+  }
+  return { present: false, ownerId: null, name: null };
 }

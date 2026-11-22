@@ -13,7 +13,7 @@ const appUrl =
 const ownerId = (process.env.HUB_OWNER_ID || "").trim();
 
 export const auth = betterAuth({
-  appName: "SSE Bots Hub",
+  appName: "SSE Nexus",
   baseURL: appUrl,
   secret: process.env.BETTER_AUTH_SECRET || "build-placeholder-secret-change-me",
   disabledPaths: ["/token"],
