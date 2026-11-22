@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import type { Document, Filter } from "mongodb";
 import { auth } from "./auth";
 import { getCollections, userIdFilter } from "./mongodb";
 import { fetchSupportMemberAccess } from "./discord";
@@ -39,7 +40,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
       discordId = String(acc.accountId);
       await authUsers
         .updateOne(
-          { _id: userIdFilter(session.user.id) },
+          { _id: userIdFilter(session.user.id) } as unknown as Filter<Document>,
           { $set: { discordId } }
         )
         .catch(() => {});
@@ -89,4 +90,4 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     blacklistedRoleIds: matchedBlocked,
     supportRoles,
   };
-}
+    }
