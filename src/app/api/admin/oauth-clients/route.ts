@@ -17,7 +17,7 @@ const createClientSchema = z.object({
 
 export async function GET() {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
+  if (!ctx || !ctx.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { oauthClients } = await getCollections();
@@ -33,7 +33,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
+  if (!ctx || !ctx.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
+  if (!ctx || !ctx.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { searchParams } = new URL(req.url);
