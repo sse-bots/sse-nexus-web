@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   const parsed = createClientSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid OAuth client payload.", details: parsed.error.flatten() },
+      { error: "Invalid OAuth client payload.", details: parsed.error.issues },
       { status: 400 }
     );
   }
@@ -51,7 +51,6 @@ export async function POST(req: Request) {
 
   const hdrs = await headers();
   try {
-    // Use Better Auth OAuth Provider server API to register the client cleanly
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const api = auth.api as any;
     const createFn = api.adminCreateOAuthClient || api.createOAuthClient;
@@ -65,7 +64,7 @@ export async function POST(req: Request) {
     const created = await createFn({
       headers: hdrs,
       body: {
-        name,
+        client_name: name,
         redirect_uris,
         scope: (
           scopes && scopes.length > 0
@@ -76,8 +75,8 @@ export async function POST(req: Request) {
           ? "none"
           : "client_secret_basic",
         skip_consent,
-        uri: uri || undefined,
-        icon: icon || undefined,
+        client_uri: uri || undefined,
+        logo_uri: icon || undefined,
       },
     });
 
@@ -85,7 +84,12 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("Failed to create OAuth client:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to register OAuth client." },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to register OAuth client.",
+      },
       { status: 500 }
     );
   }
@@ -99,7 +103,10 @@ export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url);
   const clientId = searchParams.get("clientId");
   if (!clientId) {
-    return NextResponse.json({ error: "clientId is required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "clientId is required." },
+      { status: 400 }
+    );
   }
   const { oauthClients, oauthConsents } = await getCollections();
   await oauthClients.deleteOne({ clientId });
