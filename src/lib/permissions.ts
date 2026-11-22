@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { auth } from "./auth";
-import { getCollections } from "./mongodb";
-import { fetchSupportMemberRoles } from "./discord";
+import { getCollections, userIdFilter } from "./mongodb";
+import { fetchSupportMemberAccess } from "./discord";
 
 export interface SessionContext {
   userId: string;
@@ -10,6 +10,11 @@ export interface SessionContext {
   email: string;
   image: string | null;
   isOwner: boolean;
+  isSupportAdmin: boolean;
+  isSupportMod: boolean;
+  /** Hub Owner OR Support Server Administrator */
+  isAdmin: boolean;
+  /** Hub Owner OR Support Server Admin OR Support Server Moderator */
   isStaff: boolean;
   isBlacklisted: boolean;
   blacklistedRoleIds: string[];
@@ -21,17 +26,24 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   const session = await auth.api.getSession({ headers: hdrs });
   if (!session?.user) return null;
 
-  const { authAccounts, guildSettings } = await getCollections();
+  const { authAccounts, authUsers, guildSettings } = await getCollections();
   const userRecord = session.user as unknown as Record<string, unknown>;
   let discordId = String(userRecord.discordId || "").trim();
 
   if (!discordId) {
     const acc = await authAccounts.findOne({
-      userId: session.user.id,
+      userId: userIdFilter(session.user.id),
       providerId: "discord",
     });
     if (acc?.accountId) {
       discordId = String(acc.accountId);
+      // Backfill onto the Better Auth user document so OAuth / profile always has it
+      await authUsers
+        .updateOne(
+          { _id: userIdFilter(session.user.id) },
+          { $set: { discordId } }
+        )
+        .catch(() => {});
     }
   }
 
@@ -39,9 +51,13 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
   const isOwner = Boolean(ownerId && discordId && discordId === ownerId);
 
-  const cfg = supportGuildId
-    ? await guildSettings.findOne({ guild_id: supportGuildId })
-    : null;
+  const [cfg, supportAccess] = await Promise.all([
+    supportGuildId ? guildSettings.findOne({ guild_id: supportGuildId }) : null,
+    discordId
+      ? fetchSupportMemberAccess(discordId)
+      : Promise.resolve({ roles: [], isSupportAdmin: false }),
+  ]);
+
   const modRoleIds = new Set<string>(
     ((cfg?.moderator_role_ids as string[]) || []).map(String)
   );
@@ -49,12 +65,12 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     ((cfg?.blacklisted_role_ids as string[]) || []).map(String)
   );
 
-  const supportRoles = discordId
-    ? await fetchSupportMemberRoles(discordId)
-    : [];
+  const supportRoles = supportAccess.roles;
+  const isSupportAdmin = supportAccess.isSupportAdmin;
+  const isSupportMod = supportRoles.some((roleId) => modRoleIds.has(roleId));
+  const isAdmin = isOwner || isSupportAdmin;
+  const isStaff = isAdmin || isSupportMod;
 
-  const isStaff =
-    isOwner || supportRoles.some((roleId) => modRoleIds.has(roleId));
   const matchedBlocked = supportRoles.filter((roleId) =>
     blockedRoleIds.has(roleId)
   );
@@ -66,8 +82,11 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     email: session.user.email,
     image: session.user.image ?? null,
     isOwner,
+    isSupportAdmin,
+    isSupportMod,
+    isAdmin,
     isStaff,
-    isBlacklisted: !isOwner && matchedBlocked.length > 0,
+    isBlacklisted: !isAdmin && matchedBlocked.length > 0,
     blacklistedRoleIds: matchedBlocked,
     supportRoles,
   };
