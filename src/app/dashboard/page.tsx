@@ -121,7 +121,6 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Filter pills & Legend */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -225,7 +224,6 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Status dot badge */}
                   <span
                     className={`absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0c0f17] ${
                       srv.nexusPresent ? "bg-emerald-500" : "bg-rose-500"
