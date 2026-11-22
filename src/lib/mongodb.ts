@@ -1,11 +1,8 @@
-import { MongoClient, Db, Collection, Document } from "mongodb";
+import { MongoClient, MongoClientOptions, Db, Document } from "mongodb";
+import { attachDatabasePool } from "@vercel/functions";
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
 const dbName = process.env.MONGODB_DB_NAME || "sse_bots_user";
-
-if (!uri) {
-  throw new Error("MONGODB_URI is not set in environment variables.");
-}
 
 declare global {
   // eslint-disable-next-line no-var
@@ -14,20 +11,31 @@ declare global {
   var _sseMongoConnectPromise: Promise<MongoClient> | undefined;
 }
 
+const options: MongoClientOptions = {
+  maxPoolSize: 5,
+  maxIdleTimeMS: 5000,
+  serverSelectionTimeoutMS: 15000,
+  connectTimeoutMS: 10000,
+  appName: "SSE-Bots-Hub-Web",
+};
+
+function createClient(): MongoClient {
+  const client = new MongoClient(uri, options);
+  attachDatabasePool(client);
+  return client;
+}
+
 export const mongoClient: MongoClient =
-  globalThis._sseMongoClient ??
-  new MongoClient(uri, {
-    maxPoolSize: 20,
-    serverSelectionTimeoutMS: 15000,
-    connectTimeoutMS: 10000,
-    appName: "SSE-Bots-Hub-Web",
-  });
+  globalThis._sseMongoClient ?? createClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalThis._sseMongoClient = mongoClient;
 }
 
 export async function getMongoClient(): Promise<MongoClient> {
+  if (!process.env.MONGODB_URI) {
+    throw new Error("MONGODB_URI is not set in environment variables.");
+  }
   if (!globalThis._sseMongoConnectPromise) {
     globalThis._sseMongoConnectPromise = mongoClient.connect();
   }
@@ -57,7 +65,6 @@ export async function getCollections() {
     announcementHistory: db.collection<Document>("announcement_history"),
     botInstallations: db.collection<Document>("bot_installations"),
     webSyncEvents: db.collection<Document>("web_sync_events"),
-    // Better Auth collections (stored in same DB)
     authUsers: db.collection<Document>("user"),
     authAccounts: db.collection<Document>("account"),
     oauthClients: db.collection<Document>("oauthClient"),
@@ -68,7 +75,11 @@ export async function getCollections() {
 export function serializeDoc<T extends Record<string, unknown>>(doc: T): T {
   return JSON.parse(
     JSON.stringify(doc, (_key, value) => {
-      if (value && typeof value === "object" && typeof value.toHexString === "function") {
+      if (
+        value &&
+        typeof value === "object" &&
+        typeof value.toHexString === "function"
+      ) {
         return value.toHexString();
       }
       return value;
