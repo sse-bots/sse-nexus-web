@@ -1,21 +1,33 @@
 import { NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { getCollections, serializeDoc } from "@/lib/mongodb";
+import { fetchSupportGuildResources } from "@/lib/discord";
 
-export async function GET() {
+export async function GET(req: Request) {
   const ctx = await getSessionContext();
   if (!ctx || !ctx.isOwner) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Only the Hub Owner can view or edit Hub Settings." },
+      { status: 403 }
+    );
   }
+
+  const { searchParams } = new URL(req.url);
+  const forceRefresh = searchParams.get("refresh") === "1";
+
   const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
   const { guildSettings, logs } = await getCollections();
-  const [settings, recentLogs] = await Promise.all([
+  const [settings, recentLogs, resources] = await Promise.all([
     guildSettings.findOne({ guild_id: supportGuildId }),
     logs.find({}).sort({ created_at: -1 }).limit(60).toArray(),
+    fetchSupportGuildResources(forceRefresh),
   ]);
 
   return NextResponse.json({
     supportGuildId,
+    supportGuildName: resources.guildName,
+    roles: resources.roles,
+    channels: resources.channels,
     settings: settings ? serializeDoc(settings) : { guild_id: supportGuildId },
     logs: recentLogs.map((l) => serializeDoc(l)),
   });
@@ -24,11 +36,18 @@ export async function GET() {
 export async function PUT(req: Request) {
   const ctx = await getSessionContext();
   if (!ctx || !ctx.isOwner) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Only the Hub Owner can update Hub Settings." },
+      { status: 403 }
+    );
   }
+
   const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
   if (!supportGuildId) {
-    return NextResponse.json({ error: "HUB_SUPPORT_GUILD_ID not set." }, { status: 400 });
+    return NextResponse.json(
+      { error: "HUB_SUPPORT_GUILD_ID not set." },
+      { status: 400 }
+    );
   }
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -58,9 +77,10 @@ export async function PUT(req: Request) {
 
   for (const field of allowedArrayFields) {
     if (Array.isArray(body[field])) {
-      payload[field] = (body[field] as string[])
+      const cleaned = (body[field] as string[])
         .map((v) => String(v).trim())
         .filter((v) => /^\d{17,20}$/.test(v));
+      payload[field] = Array.from(new Set(cleaned));
     }
   }
   for (const field of allowedStringFields) {
