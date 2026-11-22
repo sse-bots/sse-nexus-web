@@ -364,3 +364,154 @@ export async function verifyGuildOwnerViaBot(guildId: string): Promise<{
   }
   return { present: false, ownerId: null, name: null };
 }
+
+export interface DiscordRoleOption {
+  id: string;
+  name: string;
+  color: number;
+  position: number;
+  managed: boolean;
+}
+
+export interface DiscordChannelOption {
+  id: string;
+  name: string;
+  type: number;
+  position: number;
+  categoryName: string | null;
+}
+
+let supportResourcesCache: {
+  guildName: string | null;
+  roles: DiscordRoleOption[];
+  channels: DiscordChannelOption[];
+  expiresAt: number;
+} | null = null;
+
+export async function fetchSupportGuildResources(forceRefresh = false): Promise<{
+  guildName: string | null;
+  roles: DiscordRoleOption[];
+  channels: DiscordChannelOption[];
+}> {
+  if (
+    !forceRefresh &&
+    supportResourcesCache &&
+    Date.now() < supportResourcesCache.expiresAt
+  ) {
+    return {
+      guildName: supportResourcesCache.guildName,
+      roles: supportResourcesCache.roles,
+      channels: supportResourcesCache.channels,
+    };
+  }
+
+  const token = (process.env.HUB_DISCORD_TOKEN || "").trim();
+  const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
+  if (!token || !supportGuildId) {
+    return { guildName: null, roles: [], channels: [] };
+  }
+
+  try {
+    const [guildRes, rolesRes, channelsRes] = await Promise.all([
+      fetch(`${DISCORD_API}/guilds/${supportGuildId}`, {
+        headers: { Authorization: `Bot ${token}` },
+        cache: "no-store",
+      }),
+      fetch(`${DISCORD_API}/guilds/${supportGuildId}/roles`, {
+        headers: { Authorization: `Bot ${token}` },
+        cache: "no-store",
+      }),
+      fetch(`${DISCORD_API}/guilds/${supportGuildId}/channels`, {
+        headers: { Authorization: `Bot ${token}` },
+        cache: "no-store",
+      }),
+    ]);
+
+    const guildData = guildRes.ok
+      ? ((await guildRes.json()) as { name?: string })
+      : null;
+
+    const rawRoles = rolesRes.ok
+      ? ((await rolesRes.json()) as Array<{
+          id: string;
+          name: string;
+          color: number;
+          position: number;
+          managed?: boolean;
+        }>)
+      : [];
+
+    const roles: DiscordRoleOption[] = Array.isArray(rawRoles)
+      ? rawRoles
+          .filter((r) => String(r.id) !== supportGuildId) // exclude @everyone
+          .map((r) => ({
+            id: String(r.id),
+            name: r.name,
+            color: Number(r.color || 0),
+            position: Number(r.position || 0),
+            managed: Boolean(r.managed),
+          }))
+          .sort((a, b) => b.position - a.position)
+      : [];
+
+    const rawChannels = channelsRes.ok
+      ? ((await channelsRes.json()) as Array<{
+          id: string;
+          name: string;
+          type: number;
+          position?: number;
+          parent_id?: string | null;
+        }>)
+      : [];
+
+    const categoryMap = new Map<string, { name: string; position: number }>();
+    if (Array.isArray(rawChannels)) {
+      for (const ch of rawChannels) {
+        if (ch.type === 4) {
+          categoryMap.set(String(ch.id), {
+            name: ch.name,
+            position: Number(ch.position || 0),
+          });
+        }
+      }
+    }
+
+    const channels: DiscordChannelOption[] = Array.isArray(rawChannels)
+      ? rawChannels
+          .filter((ch) => ch.type === 0 || ch.type === 5)
+          .map((ch) => {
+            const cat = ch.parent_id
+              ? categoryMap.get(String(ch.parent_id))
+              : undefined;
+            return {
+              id: String(ch.id),
+              name: ch.name,
+              type: ch.type,
+              position: Number(ch.position || 0),
+              categoryName: cat?.name || null,
+            };
+          })
+          .sort((a, b) => {
+            const catCmp = (a.categoryName || "").localeCompare(
+              b.categoryName || ""
+            );
+            return catCmp !== 0 ? catCmp : a.position - b.position;
+          })
+      : [];
+
+    supportResourcesCache = {
+      guildName: guildData?.name || null,
+      roles,
+      channels,
+      expiresAt: Date.now() + 60_000,
+    };
+
+    return {
+      guildName: supportResourcesCache.guildName,
+      roles,
+      channels,
+    };
+  } catch {
+    return { guildName: null, roles: [], channels: [] };
+  }
+}
