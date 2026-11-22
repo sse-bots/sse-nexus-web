@@ -1,4 +1,4 @@
-import { MongoClient, MongoClientOptions, Db, Document } from "mongodb";
+import { MongoClient, MongoClientOptions, Db, Document, ObjectId } from "mongodb";
 import { attachDatabasePool } from "@vercel/functions";
 
 const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
@@ -49,6 +49,18 @@ export function getDbSync(): Db {
 export async function getDb(): Promise<Db> {
   const client = await getMongoClient();
   return client.db(dbName);
+}
+
+/**
+ * Matches Better Auth userId whether @better-auth/mongo-adapter stored it
+ * as an ObjectId or a string.
+ */
+export function userIdFilter(userId: string): { $in: Array<string | ObjectId> } {
+  const values: Array<string | ObjectId> = [userId];
+  if (ObjectId.isValid(userId)) {
+    values.push(new ObjectId(userId));
+  }
+  return { $in: values };
 }
 
 export async function getCollections() {

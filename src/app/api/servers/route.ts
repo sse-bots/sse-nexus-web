@@ -1,26 +1,31 @@
 import { NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import {
+  buildNexusInviteUrl,
   fetchUserDiscordGuilds,
   getNexusPresentGuildIds,
   hasManageGuild,
 } from "@/lib/discord";
 import { getCollections } from "@/lib/mongodb";
-import type { DiscordGuildSummary } from "@/lib/types";
 
-export async function GET() {
+export async function GET(req: Request) {
   const ctx = await getSessionContext();
   if (!ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const forceRefresh = searchParams.get("refresh") === "1";
+
   try {
     const [userGuilds, nexusGuildIds] = await Promise.all([
       fetchUserDiscordGuilds(ctx.userId),
-      getNexusPresentGuildIds(),
+      getNexusPresentGuildIds(forceRefresh),
     ]);
 
-    const manageable = userGuilds.filter((g) => hasManageGuild(g.permissions, g.owner));
+    const manageable = userGuilds.filter((g) =>
+      hasManageGuild(g.permissions, g.owner)
+    );
     const guildIds = manageable.map((g) => g.id);
 
     const { servers, requests, keys } = await getCollections();
@@ -62,29 +67,35 @@ export async function GET() {
       readyKeyCount.set(gid, (readyKeyCount.get(gid) || 0) + 1);
     }
 
-    const summaries: DiscordGuildSummary[] = manageable.map((g) => ({
-      id: g.id,
-      name: g.name,
-      icon: g.icon,
-      owner: Boolean(g.owner),
-      permissions: g.permissions,
-      canManage: true,
-      nexusPresent: nexusGuildIds.has(g.id),
-      activeBotCount: activeCount.get(g.id) || 0,
-      pendingRequestCount: pendingCount.get(g.id) || 0,
-      readyKeyCount: readyKeyCount.get(g.id) || 0,
-    }));
-
-    const withNexus = summaries
-      .filter((s) => s.nexusPresent)
-      .sort((a, b) => Number(b.owner) - Number(a.owner) || a.name.localeCompare(b.name));
-    const withoutNexus = summaries
-      .filter((s) => !s.nexusPresent)
-      .sort((a, b) => Number(b.owner) - Number(a.owner) || a.name.localeCompare(b.name));
+    const allServers = manageable
+      .map((g) => {
+        const nexusPresent = nexusGuildIds.has(g.id);
+        return {
+          id: g.id,
+          name: g.name,
+          icon: g.icon,
+          owner: Boolean(g.owner),
+          permissions: g.permissions,
+          canManage: true,
+          nexusPresent,
+          inviteUrl: buildNexusInviteUrl(g.id),
+          activeBotCount: activeCount.get(g.id) || 0,
+          pendingRequestCount: pendingCount.get(g.id) || 0,
+          readyKeyCount: readyKeyCount.get(g.id) || 0,
+        };
+      })
+      .sort(
+        (a, b) =>
+          Number(b.nexusPresent) - Number(a.nexusPresent) ||
+          Number(b.owner) - Number(a.owner) ||
+          a.name.localeCompare(b.name)
+      );
 
     return NextResponse.json({
-      serversWithNexus: withNexus,
-      otherManagedServers: withoutNexus,
+      servers: allServers,
+      serversWithNexus: allServers.filter((s) => s.nexusPresent),
+      otherManagedServers: allServers.filter((s) => !s.nexusPresent),
+      nexusInviteUrl: buildNexusInviteUrl(),
       user: {
         discordId: ctx.discordId,
         isBlacklisted: ctx.isBlacklisted,

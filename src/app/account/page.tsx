@@ -13,6 +13,7 @@ interface MeData {
     email: string;
     image: string | null;
     isOwner: boolean;
+    isAdmin: boolean;
     isStaff: boolean;
     isBlacklisted: boolean;
   } | null;
@@ -55,20 +56,25 @@ export default function AccountPage() {
   }, []);
 
   async function revokeApp(clientId: string) {
-    await fetch(`/api/account/consents?clientId=${encodeURIComponent(clientId)}`, {
-      method: "DELETE",
-    });
+    await fetch(
+      `/api/account/consents?clientId=${encodeURIComponent(clientId)}`,
+      { method: "DELETE" }
+    );
     load();
   }
 
   if (loading) {
-    return <div className="py-20 text-center text-slate-400">Loading profile...</div>;
+    return (
+      <div className="py-20 text-center text-slate-400">Loading profile...</div>
+    );
   }
 
   if (!me?.authenticated || !me.user) {
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center">
-        <p className="text-slate-300">Please sign in to view your SSE profile.</p>
+        <p className="text-slate-300">
+          Please sign in to view your SSE profile.
+        </p>
         <Link
           href="/sign-in"
           className="mt-4 inline-block rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white"
@@ -87,7 +93,11 @@ export default function AccountPage() {
         <div className="flex items-center gap-4">
           {u.image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={u.image} alt={u.name} className="h-16 w-16 rounded-2xl object-cover" />
+            <img
+              src={u.image}
+              alt={u.name}
+              className="h-16 w-16 rounded-2xl object-cover"
+            />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 text-xl font-bold">
               <User className="h-8 w-8" />
@@ -103,16 +113,19 @@ export default function AccountPage() {
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Unified SSE Profile Active
               </span>
-              {u.isOwner && (
+              {u.isOwner ? (
                 <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 font-semibold text-amber-300">
                   Hub Owner
                 </span>
-              )}
-              {!u.isOwner && u.isStaff && (
-                <span className="rounded-full bg-indigo-500/15 px-2.5 py-0.5 font-semibold text-indigo-300">
-                  SSE Moderator
+              ) : u.isAdmin ? (
+                <span className="rounded-full bg-violet-500/15 px-2.5 py-0.5 font-semibold text-violet-300">
+                  Support Server Admin
                 </span>
-              )}
+              ) : u.isStaff ? (
+                <span className="rounded-full bg-indigo-500/15 px-2.5 py-0.5 font-semibold text-indigo-300">
+                  Support Server Moderator
+                </span>
+              ) : null}
             </div>
           </div>
         </div>

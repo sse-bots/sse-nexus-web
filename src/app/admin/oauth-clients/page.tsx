@@ -95,7 +95,7 @@ export default function AdminOAuthClientsPage() {
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
-      : "https://hub.sse-world.com";
+      : "https://sse-nexus.vercel.app";
 
   return (
     <div className="space-y-6">

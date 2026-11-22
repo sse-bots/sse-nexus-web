@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
-import { getCollections, serializeDoc } from "@/lib/mongodb";
+import { getCollections, serializeDoc, userIdFilter } from "@/lib/mongodb";
 
 export async function GET() {
   const ctx = await getSessionContext();
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { oauthConsents, oauthClients } = await getCollections();
-  const consents = await oauthConsents.find({ userId: ctx.userId }).toArray();
+  const consents = await oauthConsents
+    .find({ userId: userIdFilter(ctx.userId) })
+    .toArray();
   const clientIds = consents.map((c) => c.clientId);
   const clients = await oauthClients
     .find({ clientId: { $in: clientIds } })
@@ -35,9 +37,15 @@ export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url);
   const clientId = searchParams.get("clientId");
   if (!clientId) {
-    return NextResponse.json({ error: "clientId is required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "clientId is required." },
+      { status: 400 }
+    );
   }
   const { oauthConsents } = await getCollections();
-  await oauthConsents.deleteMany({ userId: ctx.userId, clientId });
+  await oauthConsents.deleteMany({
+    userId: userIdFilter(ctx.userId),
+    clientId,
+  });
   return NextResponse.json({ ok: true });
 }

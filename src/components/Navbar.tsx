@@ -11,6 +11,7 @@ interface MeUser {
   discordId: string;
   image: string | null;
   isOwner: boolean;
+  isAdmin: boolean;
   isStaff: boolean;
 }
 
@@ -61,7 +62,7 @@ export function Navbar() {
           </div>
           <div className="leading-tight">
             <div className="text-sm font-bold tracking-tight text-white">
-              SSE Bots Hub
+              SSE Nexus
             </div>
             <div className="text-[11px] text-slate-400">
               Activation &amp; Single Sign-On
@@ -72,7 +73,8 @@ export function Navbar() {
         <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map(({ href, label, icon: Icon }) => {
             const active =
-              pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+              pathname === href ||
+              (href !== "/" && pathname.startsWith(href + "/"));
             return (
               <Link
                 key={href}
@@ -111,17 +113,22 @@ export function Navbar() {
                     {user.name.slice(0, 2).toUpperCase()}
                   </div>
                 )}
-                <span className="max-w-[120px] truncate font-medium">{user.name}</span>
-                {user.isOwner && (
+                <span className="max-w-[120px] truncate font-medium">
+                  {user.name}
+                </span>
+                {user.isOwner ? (
                   <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
                     OWNER
                   </span>
-                )}
-                {!user.isOwner && user.isStaff && (
-                  <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-300">
-                    STAFF
+                ) : user.isAdmin ? (
+                  <span className="rounded bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-violet-300">
+                    ADMIN
                   </span>
-                )}
+                ) : user.isStaff ? (
+                  <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-300">
+                    MOD
+                  </span>
+                ) : null}
               </Link>
               <button
                 type="button"
