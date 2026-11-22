@@ -12,7 +12,7 @@ const serverActionSchema = z.object({
 
 export async function GET(req: Request) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
+  if (!ctx || !ctx.isStaff) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { searchParams } = new URL(req.url);
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
+  if (!ctx || !ctx.isStaff) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
@@ -46,8 +46,12 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { bot_activation_id, guild_id, action, reason = "Updated by Hub owner" } =
-    parsed.data;
+  const {
+    bot_activation_id,
+    guild_id,
+    action,
+    reason = "Updated by SSE staff",
+  } = parsed.data;
   const { servers, logs, webSyncEvents } = await getCollections();
   const now = new Date();
 
@@ -65,20 +69,27 @@ export async function PATCH(req: Request) {
         status: nextStatus,
         updated_at: now,
         ...(action === "revoke"
-          ? { revoked_at: now, revoked_by: ctx.discordId, revocation_reason: reason }
+          ? {
+              revoked_at: now,
+              revoked_by: ctx.discordId,
+              revocation_reason: reason,
+            }
           : {}),
       },
     }
   );
   if (!res.matchedCount) {
-    return NextResponse.json({ error: "Server license not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Server license not found." },
+      { status: 404 }
+    );
   }
 
   await logs.insertOne({
     bot_activation_id,
     guild_id,
     user_id: ctx.discordId,
-    event: `server_${action}_by_owner_web`,
+    event: `server_${action}_by_staff_web`,
     reason,
     created_at: now,
   });
