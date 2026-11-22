@@ -15,7 +15,7 @@ const addBotSchema = z.object({
 
 export async function GET() {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isStaff) {
+  if (!ctx || !ctx.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { bots, botInstallations, servers } = await getCollections();
@@ -51,15 +51,18 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const ctx = await getSessionContext();
-  if (!ctx || !ctx.isOwner) {
-    return NextResponse.json({ error: "Only the Hub owner can register bots." }, { status: 403 });
+  if (!ctx || !ctx.isAdmin) {
+    return NextResponse.json(
+      { error: "Only Support Server Admins and the Hub Owner can register bots." },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => null);
   const parsed = addBotSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid bot details.", details: parsed.error.flatten() },
+      { error: "Invalid bot details.", details: parsed.error.issues },
       { status: 400 }
     );
   }
