@@ -16,7 +16,9 @@ interface OAuthClientRow {
 export default function AdminOAuthClientsPage() {
   const [clients, setClients] = useState<OAuthClientRow[]>([]);
   const [name, setName] = useState("");
-  const [redirectUris, setRedirectUris] = useState("http://localhost:3001/api/auth/oauth2/callback/sse");
+  const [redirectUris, setRedirectUris] = useState(
+    "http://localhost:3001/api/auth/oauth2/callback/sse"
+  );
   const [skipConsent, setSkipConsent] = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{
     client_id: string;
@@ -41,8 +43,7 @@ export default function AdminOAuthClientsPage() {
     setError(null);
     setCreatedCreds(null);
     const uris = redirectUris
-      .split(/\s*,\s*|
-+/)
+      .split(/[\s,]+/)
       .map((s) => s.trim())
       .filter(Boolean);
 
@@ -77,12 +78,17 @@ export default function AdminOAuthClientsPage() {
   }
 
   async function deleteClient(clientId: string) {
-    if (!confirm("Delete this OAuth client app? External logins using it will stop working.")) {
+    if (
+      !confirm(
+        "Delete this OAuth client app? External logins using it will stop working."
+      )
+    ) {
       return;
     }
-    await fetch(`/api/admin/oauth-clients?clientId=${encodeURIComponent(clientId)}`, {
-      method: "DELETE",
-    });
+    await fetch(
+      `/api/admin/oauth-clients?clientId=${encodeURIComponent(clientId)}`,
+      { method: "DELETE" }
+    );
     await load();
   }
 
@@ -213,14 +219,15 @@ export default function AdminOAuthClientsPage() {
         ))}
       </div>
 
-      {/* Discovery Endpoints & Integration Reference */}
       <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 text-xs text-slate-300">
         <div className="font-semibold text-white">
           OIDC / OAuth 2.1 Discovery Endpoints (for other SSE websites)
         </div>
         <div className="mt-2 space-y-1 font-mono text-[11px] text-indigo-300">
           <div>OpenID Config: {origin}/.well-known/openid-configuration</div>
-          <div>OAuth Metadata: {origin}/.well-known/oauth-authorization-server</div>
+          <div>
+            OAuth Metadata: {origin}/.well-known/oauth-authorization-server
+          </div>
           <div>Authorize URL: {origin}/api/auth/oauth2/authorize</div>
           <div>Token URL: {origin}/api/auth/oauth2/token</div>
           <div>UserInfo URL: {origin}/api/auth/oauth2/userinfo</div>

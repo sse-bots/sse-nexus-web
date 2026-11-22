@@ -15,7 +15,7 @@ const ownerId = (process.env.HUB_OWNER_ID || "").trim();
 export const auth = betterAuth({
   appName: "SSE Bots Hub",
   baseURL: appUrl,
-  secret: process.env.BETTER_AUTH_SECRET,
+  secret: process.env.BETTER_AUTH_SECRET || "build-placeholder-secret-change-me",
   disabledPaths: ["/token"],
   database: mongodbAdapter(getDbSync(), {
     client: mongoClient,
@@ -36,8 +36,8 @@ export const auth = betterAuth({
   },
   socialProviders: {
     discord: {
-      clientId: process.env.DISCORD_CLIENT_ID as string,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET as string,
+      clientId: process.env.DISCORD_CLIENT_ID || "",
+      clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
       scope: ["identify", "email", "guilds"],
       mapProfileToUser: (profile) => {
         const avatarUrl = profile.avatar
@@ -45,7 +45,6 @@ export const auth = betterAuth({
           : undefined;
         return {
           name: profile.global_name || profile.username || `User ${profile.id}`,
-          // Handle phone-only Discord accounts that have no email address
           email: profile.email || `${profile.id}@discord.sse-world.local`,
           image: avatarUrl,
           discordId: String(profile.id),
@@ -74,23 +73,21 @@ export const auth = betterAuth({
       ],
       allowPublicClientPrelogin: true,
       customUserInfoClaims: async ({ user }) => {
-        const discordId = (user as Record<string, unknown>).discordId as
-          | string
-          | undefined;
-        const discordUsername = (user as Record<string, unknown>)
-          .discordUsername as string | undefined;
+        const u = user as unknown as Record<string, unknown>;
+        const discordId = typeof u.discordId === "string" ? u.discordId : null;
+        const discordUsername =
+          typeof u.discordUsername === "string" ? u.discordUsername : null;
         return {
-          discord_id: discordId || null,
-          discord_username: discordUsername || null,
+          discord_id: discordId,
+          discord_username: discordUsername,
           sse_role: discordId && discordId === ownerId ? "owner" : "user",
         };
       },
       customIdTokenClaims: async ({ user }) => {
-        const discordId = (user as Record<string, unknown>).discordId as
-          | string
-          | undefined;
+        const u = user as unknown as Record<string, unknown>;
+        const discordId = typeof u.discordId === "string" ? u.discordId : null;
         return {
-          discord_id: discordId || null,
+          discord_id: discordId,
           sse_role: discordId && discordId === ownerId ? "owner" : "user",
         };
       },
