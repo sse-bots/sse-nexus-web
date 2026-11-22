@@ -1,0 +1,76 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Bot,
+  Globe,
+  KeyRound,
+  LayoutDashboard,
+  Megaphone,
+  Server,
+  Settings,
+  Inbox,
+} from "lucide-react";
+
+const ADMIN_LINKS = [
+  { href: "/admin", label: "Overview", icon: LayoutDashboard, adminOnly: false },
+  { href: "/admin/requests", label: "Requests Queue", icon: Inbox, adminOnly: false },
+  { href: "/admin/bots", label: "Bots & Status", icon: Bot, adminOnly: true },
+  { href: "/admin/keys", label: "Activation Keys", icon: KeyRound, adminOnly: true },
+  { href: "/admin/servers", label: "Server Licenses", icon: Server, adminOnly: true },
+  { href: "/admin/announcements", label: "Announcements", icon: Megaphone, adminOnly: true },
+  { href: "/admin/oauth-clients", label: "SSO / OAuth Apps", icon: Globe, adminOnly: true },
+  { href: "/admin/settings", label: "Hub Settings & Logs", icon: Settings, adminOnly: true },
+];
+
+export function AdminShell({
+  isAdmin,
+  isOwner,
+  children,
+}: {
+  isAdmin: boolean;
+  isOwner: boolean;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const visibleLinks = ADMIN_LINKS.filter((l) => isAdmin || !l.adminOnly);
+
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
+      <aside className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 lg:sticky lg:top-24 lg:self-start">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            SSE Hub Admin
+          </span>
+          <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-300">
+            {isOwner ? "OWNER" : isAdmin ? "ADMIN" : "MOD"}
+          </span>
+        </div>
+        <nav className="space-y-1">
+          {visibleLinks.map(({ href, label, icon: Icon }) => {
+            const active =
+              href === "/admin"
+                ? pathname === "/admin"
+                : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                  active
+                    ? "bg-indigo-600/20 text-indigo-300"
+                    : "text-slate-300 hover:bg-slate-800/70 hover:text-white"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
