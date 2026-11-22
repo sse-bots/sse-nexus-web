@@ -12,6 +12,7 @@ interface Overview {
   activeServers: number;
   oauthClientCount: number;
   scheduledAnnouncements: number;
+  isAdmin: boolean;
   isOwner: boolean;
 }
 
@@ -38,7 +39,11 @@ export default function AdminOverviewPage() {
   }
 
   if (!data) {
-    return <div className="py-12 text-center text-slate-400">Loading Hub overview...</div>;
+    return (
+      <div className="py-12 text-center text-slate-400">
+        Loading Hub overview...
+      </div>
+    );
   }
 
   const cards = [
@@ -48,13 +53,7 @@ export default function AdminOverviewPage() {
       href: "/admin/requests",
       icon: Inbox,
       accent: "text-amber-400",
-    },
-    {
-      label: "Active / Online Bots",
-      value: `${data.onlineBots} / ${data.activeBots}`,
-      href: "/admin/bots",
-      icon: Bot,
-      accent: "text-emerald-400",
+      allowed: true,
     },
     {
       label: "Active Server Licenses",
@@ -62,13 +61,15 @@ export default function AdminOverviewPage() {
       href: "/admin/servers",
       icon: Server,
       accent: "text-indigo-400",
+      allowed: true,
     },
     {
-      label: "Unused Activation Keys",
-      value: data.unusedKeys,
-      href: "/admin/keys",
-      icon: KeyRound,
-      accent: "text-violet-400",
+      label: "Active / Online Bots",
+      value: `${data.onlineBots} / ${data.activeBots}`,
+      href: "/admin/bots",
+      icon: Bot,
+      accent: "text-emerald-400",
+      allowed: data.isAdmin || data.isOwner,
     },
     {
       label: "SSO OAuth Client Apps",
@@ -76,6 +77,15 @@ export default function AdminOverviewPage() {
       href: "/admin/oauth-clients",
       icon: Globe,
       accent: "text-sky-400",
+      allowed: data.isAdmin || data.isOwner,
+    },
+    {
+      label: "Unused Activation Keys",
+      value: data.unusedKeys,
+      href: "/admin/keys",
+      icon: KeyRound,
+      accent: "text-violet-400",
+      allowed: data.isOwner,
     },
     {
       label: "Scheduled Announcements",
@@ -83,15 +93,16 @@ export default function AdminOverviewPage() {
       href: "/admin/announcements",
       icon: Megaphone,
       accent: "text-orange-400",
+      allowed: data.isOwner,
     },
-  ];
+  ].filter((c) => c.allowed);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Hub Admin Overview</h1>
         <p className="text-sm text-slate-400">
-          Live snapshot of SSE Bots Hub database (`sse_bots_user`).
+          Live snapshot of SSE Nexus database (<code>sse_bots_user</code>).
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -107,7 +118,9 @@ export default function AdminOverviewPage() {
               </span>
               <c.icon className={`h-5 w-5 ${c.accent}`} />
             </div>
-            <div className={`mt-3 text-3xl font-bold ${c.accent}`}>{c.value}</div>
+            <div className={`mt-3 text-3xl font-bold ${c.accent}`}>
+              {c.value}
+            </div>
           </Link>
         ))}
       </div>
