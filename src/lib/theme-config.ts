@@ -4,6 +4,8 @@ export interface PrimaryColorOption {
   c400: string;
   c500: string;
   c600: string;
+  /** High-contrast accent text color for Light Mode surfaces */
+  lightText: string;
   darkTextOnSolid?: boolean;
 }
 
@@ -17,6 +19,7 @@ export interface NeutralPaletteOption {
     card: string;
     input: string;
     muted: string;
+    hover: string;
     border: string;
   };
   light: {
@@ -25,6 +28,7 @@ export interface NeutralPaletteOption {
     card: string;
     input: string;
     muted: string;
+    hover: string;
     border: string;
   };
 }
@@ -64,24 +68,24 @@ export interface ThemeState {
 }
 
 export const PRIMARY_COLORS: PrimaryColorOption[] = [
-  { id: "black", label: "Black", c400: "#f8fafc", c500: "#e2e8f0", c600: "#ffffff", darkTextOnSolid: true },
-  { id: "red", label: "Red", c400: "#f87171", c500: "#ef4444", c600: "#dc2626" },
-  { id: "orange", label: "Orange", c400: "#fb923c", c500: "#f97316", c600: "#ea580c" },
-  { id: "amber", label: "Amber", c400: "#fbbf24", c500: "#f59e0b", c600: "#d97706", darkTextOnSolid: true },
-  { id: "yellow", label: "Yellow", c400: "#facc15", c500: "#eab308", c600: "#ca8a04", darkTextOnSolid: true },
-  { id: "lime", label: "Lime", c400: "#a3e635", c500: "#84cc16", c600: "#65a30d", darkTextOnSolid: true },
-  { id: "green", label: "Green", c400: "#4ade80", c500: "#22c55e", c600: "#16a34a" },
-  { id: "emerald", label: "Emerald", c400: "#34d399", c500: "#10b981", c600: "#059669" },
-  { id: "teal", label: "Teal", c400: "#2dd4bf", c500: "#14b8a6", c600: "#0d9488" },
-  { id: "cyan", label: "Cyan", c400: "#22d3ee", c500: "#06b6d4", c600: "#0891b2" },
-  { id: "sky", label: "Sky", c400: "#38bdf8", c500: "#0ea5e9", c600: "#0284c7" },
-  { id: "blue", label: "Blue", c400: "#60a5fa", c500: "#3b82f6", c600: "#2563eb" },
-  { id: "indigo", label: "Indigo", c400: "#818cf8", c500: "#6366f1", c600: "#4f46e5" },
-  { id: "violet", label: "Violet", c400: "#a78bfa", c500: "#8b5cf6", c600: "#7c3aed" },
-  { id: "purple", label: "Purple", c400: "#c084fc", c500: "#a855f7", c600: "#9333ea" },
-  { id: "fuchsia", label: "Fuchsia", c400: "#e879f9", c500: "#d946ef", c600: "#c026d3" },
-  { id: "pink", label: "Pink", c400: "#f472b6", c500: "#ec4899", c600: "#db2777" },
-  { id: "rose", label: "Rose", c400: "#fb7185", c500: "#f43f5e", c600: "#e11d48" },
+  { id: "black", label: "Black", c400: "#f8fafc", c500: "#e2e8f0", c600: "#ffffff", lightText: "#0f172a", darkTextOnSolid: true },
+  { id: "red", label: "Red", c400: "#f87171", c500: "#ef4444", c600: "#dc2626", lightText: "#b91c1c" },
+  { id: "orange", label: "Orange", c400: "#fb923c", c500: "#f97316", c600: "#ea580c", lightText: "#c2410c" },
+  { id: "amber", label: "Amber", c400: "#fbbf24", c500: "#f59e0b", c600: "#d97706", lightText: "#b45309", darkTextOnSolid: true },
+  { id: "yellow", label: "Yellow", c400: "#facc15", c500: "#eab308", c600: "#ca8a04", lightText: "#a16207", darkTextOnSolid: true },
+  { id: "lime", label: "Lime", c400: "#a3e635", c500: "#84cc16", c600: "#65a30d", lightText: "#4d7c0f", darkTextOnSolid: true },
+  { id: "green", label: "Green", c400: "#4ade80", c500: "#22c55e", c600: "#16a34a", lightText: "#15803d" },
+  { id: "emerald", label: "Emerald", c400: "#34d399", c500: "#10b981", c600: "#059669", lightText: "#047857" },
+  { id: "teal", label: "Teal", c400: "#2dd4bf", c500: "#14b8a6", c600: "#0d9488", lightText: "#0f766e" },
+  { id: "cyan", label: "Cyan", c400: "#22d3ee", c500: "#06b6d4", c600: "#0891b2", lightText: "#0e7490" },
+  { id: "sky", label: "Sky", c400: "#38bdf8", c500: "#0ea5e9", c600: "#0284c7", lightText: "#0369a1" },
+  { id: "blue", label: "Blue", c400: "#60a5fa", c500: "#3b82f6", c600: "#2563eb", lightText: "#1d4ed8" },
+  { id: "indigo", label: "Indigo", c400: "#818cf8", c500: "#6366f1", c600: "#4f46e5", lightText: "#4338ca" },
+  { id: "violet", label: "Violet", c400: "#a78bfa", c500: "#8b5cf6", c600: "#7c3aed", lightText: "#6d28d9" },
+  { id: "purple", label: "Purple", c400: "#c084fc", c500: "#a855f7", c600: "#9333ea", lightText: "#7e22ce" },
+  { id: "fuchsia", label: "Fuchsia", c400: "#e879f9", c500: "#d946ef", c600: "#c026d3", lightText: "#a21caf" },
+  { id: "pink", label: "Pink", c400: "#f472b6", c500: "#ec4899", c600: "#db2777", lightText: "#be185d" },
+  { id: "rose", label: "Rose", c400: "#fb7185", c500: "#f43f5e", c600: "#e11d48", lightText: "#be123c" },
 ];
 
 export const NEUTRAL_PALETTES: NeutralPaletteOption[] = [
@@ -89,64 +93,64 @@ export const NEUTRAL_PALETTES: NeutralPaletteOption[] = [
     id: "slate",
     label: "Slate",
     dot: "#64748b",
-    dark: { bg: "#070b14", sidebar: "#0b1120", card: "#0f172a", input: "#090f1d", muted: "#1e293b", border: "#1e293b" },
-    light: { bg: "#f1f5f9", sidebar: "#ffffff", card: "#ffffff", input: "#f8fafc", muted: "#e2e8f0", border: "#cbd5e1" },
+    dark: { bg: "#070b14", sidebar: "#0b1120", card: "#0f172a", input: "#090f1d", muted: "#1e293b", hover: "#263449", border: "#1e293b" },
+    light: { bg: "#f1f5f9", sidebar: "#ffffff", card: "#ffffff", input: "#f8fafc", muted: "#e2e8f0", hover: "#cbd5e1", border: "#cbd5e1" },
   },
   {
     id: "gray",
     label: "Gray",
     dot: "#6b7280",
-    dark: { bg: "#080a0f", sidebar: "#0d1017", card: "#111827", input: "#0a0e16", muted: "#1f2937", border: "#1f2937" },
-    light: { bg: "#f3f4f6", sidebar: "#ffffff", card: "#ffffff", input: "#f9fafb", muted: "#e5e7eb", border: "#d1d5db" },
+    dark: { bg: "#080a0f", sidebar: "#0d1017", card: "#111827", input: "#0a0e16", muted: "#1f2937", hover: "#2c3849", border: "#1f2937" },
+    light: { bg: "#f3f4f6", sidebar: "#ffffff", card: "#ffffff", input: "#f9fafb", muted: "#e5e7eb", hover: "#d1d5db", border: "#d1d5db" },
   },
   {
     id: "zinc",
     label: "Zinc",
     dot: "#71717a",
-    dark: { bg: "#09090b", sidebar: "#0e0e11", card: "#18181b", input: "#101013", muted: "#27272a", border: "#27272a" },
-    light: { bg: "#f4f4f5", sidebar: "#ffffff", card: "#ffffff", input: "#fafafa", muted: "#e4e4e7", border: "#d4d4d8" },
+    dark: { bg: "#09090b", sidebar: "#0e0e11", card: "#18181b", input: "#101013", muted: "#27272a", hover: "#323236", border: "#27272a" },
+    light: { bg: "#f4f4f5", sidebar: "#ffffff", card: "#ffffff", input: "#fafafa", muted: "#e4e4e7", hover: "#d4d4d8", border: "#d4d4d8" },
   },
   {
     id: "neutral",
     label: "Neutral",
     dot: "#737373",
-    dark: { bg: "#0a0a0a", sidebar: "#101010", card: "#171717", input: "#0f0f0f", muted: "#262626", border: "#262626" },
-    light: { bg: "#f5f5f5", sidebar: "#ffffff", card: "#ffffff", input: "#fafafa", muted: "#e5e5e5", border: "#d4d4d4" },
+    dark: { bg: "#0a0a0a", sidebar: "#101010", card: "#171717", input: "#0f0f0f", muted: "#262626", hover: "#323232", border: "#262626" },
+    light: { bg: "#f5f5f5", sidebar: "#ffffff", card: "#ffffff", input: "#fafafa", muted: "#e5e5e5", hover: "#d4d4d4", border: "#d4d4d4" },
   },
   {
     id: "stone",
     label: "Stone",
     dot: "#78716c",
-    dark: { bg: "#0c0a09", sidebar: "#12100e", card: "#1c1917", input: "#110f0d", muted: "#292524", border: "#292524" },
-    light: { bg: "#f5f5f4", sidebar: "#ffffff", card: "#ffffff", input: "#fafaf9", muted: "#e7e5e4", border: "#d6d3d1" },
+    dark: { bg: "#0c0a09", sidebar: "#12100e", card: "#1c1917", input: "#110f0d", muted: "#292524", hover: "#363130", border: "#292524" },
+    light: { bg: "#f5f5f4", sidebar: "#ffffff", card: "#ffffff", input: "#fafaf9", muted: "#e7e5e4", hover: "#d6d3d1", border: "#d6d3d1" },
   },
   {
     id: "taupe",
     label: "Taupe",
     dot: "#8b7e74",
-    dark: { bg: "#0e0c0b", sidebar: "#151210", card: "#1e1a17", input: "#13100e", muted: "#2e2824", border: "#322b26" },
-    light: { bg: "#f5f2ef", sidebar: "#fffdfb", card: "#ffffff", input: "#faf7f5", muted: "#e8e2dc", border: "#d6cdc5" },
+    dark: { bg: "#0e0c0b", sidebar: "#151210", card: "#1e1a17", input: "#13100e", muted: "#2e2824", hover: "#3b332e", border: "#322b26" },
+    light: { bg: "#f5f2ef", sidebar: "#fffdfb", card: "#ffffff", input: "#faf7f5", muted: "#e8e2dc", hover: "#d9cfc6", border: "#d6cdc5" },
   },
   {
     id: "mauve",
     label: "Mauve",
     dot: "#8b7b8b",
-    dark: { bg: "#0d0a10", sidebar: "#140f18", card: "#1c1522", input: "#120d16", muted: "#2b2133", border: "#302439" },
-    light: { bg: "#f6f2f7", sidebar: "#ffffff", card: "#ffffff", input: "#fbf8fc", muted: "#eae2ec", border: "#d8cadb" },
+    dark: { bg: "#0d0a10", sidebar: "#140f18", card: "#1c1522", input: "#120d16", muted: "#2b2133", hover: "#382b42", border: "#302439" },
+    light: { bg: "#f6f2f7", sidebar: "#ffffff", card: "#ffffff", input: "#fbf8fc", muted: "#eae2ec", hover: "#dcd0e0", border: "#d8cadb" },
   },
   {
     id: "mist",
     label: "Mist",
     dot: "#6d8594",
-    dark: { bg: "#070c10", sidebar: "#0c1319", card: "#121d26", input: "#0a1117", muted: "#1e2e3b", border: "#223442" },
-    light: { bg: "#eff4f7", sidebar: "#ffffff", card: "#ffffff", input: "#f6fafc", muted: "#dfe9ef", border: "#c7d7e0" },
+    dark: { bg: "#070c10", sidebar: "#0c1319", card: "#121d26", input: "#0a1117", muted: "#1e2e3b", hover: "#293d4d", border: "#223442" },
+    light: { bg: "#eff4f7", sidebar: "#ffffff", card: "#ffffff", input: "#f6fafc", muted: "#dfe9ef", hover: "#cddce6", border: "#c7d7e0" },
   },
   {
     id: "olive",
     label: "Olive",
     dot: "#7a8468",
-    dark: { bg: "#0a0c08", sidebar: "#10130d", card: "#181c14", input: "#0e110b", muted: "#262c20", border: "#2a3123" },
-    light: { bg: "#f3f5ef", sidebar: "#ffffff", card: "#ffffff", input: "#f9faf6", muted: "#e4e8dc", border: "#cfd6c4" },
+    dark: { bg: "#0a0c08", sidebar: "#10130d", card: "#181c14", input: "#0e110b", muted: "#262c20", hover: "#323a2b", border: "#2a3123" },
+    light: { bg: "#f3f5ef", sidebar: "#ffffff", card: "#ffffff", input: "#f9faf6", muted: "#e4e8dc", hover: "#d4dbc8", border: "#cfd6c4" },
   },
 ];
 
@@ -273,39 +277,52 @@ export function applyThemeToDocument(state: ThemeState): void {
     FONT_OPTIONS.find((f) => f.id === state.font) || FONT_OPTIONS[0];
   const surface = resolvedMode === "light" ? neutralObj.light : neutralObj.dark;
 
-  // Handle Monochrome (black/white) primary cleanly in both light & dark modes
   const isMono = primaryObj.id === "black";
-  const c400 = isMono ? (resolvedMode === "light" ? "#0f172a" : "#f8fafc") : primaryObj.c400;
-  const c500 = isMono ? (resolvedMode === "light" ? "#1e293b" : "#e2e8f0") : primaryObj.c500;
-  const c600 = isMono ? (resolvedMode === "light" ? "#0f172a" : "#ffffff") : primaryObj.c600;
-  const onPrimary =
-    isMono
-      ? resolvedMode === "light"
-        ? "#ffffff"
-        : "#090b10"
-      : primaryObj.darkTextOnSolid
-        ? "#090b10"
-        : "#ffffff";
+  const c400 = isMono
+    ? resolvedMode === "light"
+      ? "#0f172a"
+      : "#f8fafc"
+    : resolvedMode === "light"
+      ? primaryObj.lightText
+      : primaryObj.c400;
+  const c500 = isMono
+    ? resolvedMode === "light"
+      ? "#1e293b"
+      : "#e2e8f0"
+    : primaryObj.c500;
+  const c600 = isMono
+    ? resolvedMode === "light"
+      ? "#0f172a"
+      : "#ffffff"
+    : primaryObj.c600;
+  const onPrimary = isMono
+    ? resolvedMode === "light"
+      ? "#ffffff"
+      : "#090b10"
+    : primaryObj.darkTextOnSolid
+      ? "#090b10"
+      : "#ffffff";
 
   root.style.setProperty("--accent-400", c400);
   root.style.setProperty("--accent-500", c500);
   root.style.setProperty("--accent-600", c600);
   root.style.setProperty("--accent-on-solid", onPrimary);
-  root.style.setProperty("--accent-glow", hexToRgba(c500, 0.28));
-  root.style.setProperty("--accent-soft", hexToRgba(c500, 0.14));
-  root.style.setProperty("--accent-border", hexToRgba(c500, 0.45));
+  root.style.setProperty("--accent-glow", hexToRgba(c500, resolvedMode === "light" ? 0.22 : 0.30));
+  root.style.setProperty("--accent-soft", hexToRgba(c500, resolvedMode === "light" ? 0.11 : 0.15));
+  root.style.setProperty("--accent-hero-tint", hexToRgba(c500, resolvedMode === "light" ? 0.14 : 0.20));
+  root.style.setProperty("--accent-border", hexToRgba(c500, resolvedMode === "light" ? 0.38 : 0.45));
 
   root.style.setProperty("--surface-bg", surface.bg);
   root.style.setProperty("--surface-sidebar", surface.sidebar);
   root.style.setProperty("--surface-card", surface.card);
   root.style.setProperty("--surface-input", surface.input);
   root.style.setProperty("--surface-muted", surface.muted);
+  root.style.setProperty("--surface-hover", surface.hover);
   root.style.setProperty("--surface-border", surface.border);
 
   root.style.setProperty("--app-font", fontObj.family);
   root.style.setProperty("--app-radius", state.radius);
 
-  // Dynamically load selected Google Font (once per font)
   const linkId = `sse-gfont-${fontObj.id}`;
   if (!document.getElementById(linkId)) {
     const link = document.createElement("link");
