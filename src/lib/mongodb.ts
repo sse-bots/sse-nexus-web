@@ -1,8 +1,8 @@
 import { MongoClient, MongoClientOptions, Db, Document, ObjectId } from "mongodb";
 import { attachDatabasePool } from "@vercel/functions";
 
-const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
-const dbName = process.env.MONGODB_DB_NAME || "sse_bots_user";
+const uri = (process.env.MONGODB_URI || "mongodb://127.0.0.1:27017").trim();
+const dbName = (process.env.MONGODB_DB_NAME || "sse_bots_user").trim();
 
 declare global {
   // eslint-disable-next-line no-var
@@ -12,11 +12,13 @@ declare global {
 }
 
 const options: MongoClientOptions = {
-  maxPoolSize: 5,
-  maxIdleTimeMS: 5000,
-  serverSelectionTimeoutMS: 15000,
-  connectTimeoutMS: 10000,
-  appName: "SSE-Bots-Hub-Web",
+  maxPoolSize: 10,
+  minPoolSize: 0,
+  maxIdleTimeMS: 60_000,
+  serverSelectionTimeoutMS: 15_000,
+  connectTimeoutMS: 10_000,
+  socketTimeoutMS: 30_000,
+  appName: "SSE-Nexus-Web",
 };
 
 function createClient(): MongoClient {
@@ -26,18 +28,17 @@ function createClient(): MongoClient {
 }
 
 export const mongoClient: MongoClient =
-  globalThis._sseMongoClient ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis._sseMongoClient = mongoClient;
-}
+  globalThis._sseMongoClient ?? (globalThis._sseMongoClient = createClient());
 
 export async function getMongoClient(): Promise<MongoClient> {
-  if (!process.env.MONGODB_URI) {
+  if (!process.env.MONGODB_URI || !process.env.MONGODB_URI.trim()) {
     throw new Error("MONGODB_URI is not set in environment variables.");
   }
   if (!globalThis._sseMongoConnectPromise) {
-    globalThis._sseMongoConnectPromise = mongoClient.connect();
+    globalThis._sseMongoConnectPromise = mongoClient.connect().catch((err) => {
+      globalThis._sseMongoConnectPromise = undefined;
+      throw err;
+    });
   }
   return globalThis._sseMongoConnectPromise;
 }
@@ -51,16 +52,18 @@ export async function getDb(): Promise<Db> {
   return client.db(dbName);
 }
 
-/**
- * Matches Better Auth userId whether @better-auth/mongo-adapter stored it
- * as an ObjectId or a string.
- */
 export function userIdFilter(userId: string): { $in: Array<string | ObjectId> } {
   const values: Array<string | ObjectId> = [userId];
   if (ObjectId.isValid(userId)) {
     values.push(new ObjectId(userId));
   }
   return { $in: values };
+}
+
+export function userDocMatch(userId: string) {
+  return {
+    $or: [{ _id: userIdFilter(userId) }, { id: userId }],
+  };
 }
 
 export async function getCollections() {
@@ -79,8 +82,6 @@ export async function getCollections() {
     webSyncEvents: db.collection<Document>("web_sync_events"),
     authUsers: db.collection<Document>("user"),
     authAccounts: db.collection<Document>("account"),
-    oauthClients: db.collection<Document>("oauthClient"),
-    oauthConsents: db.collection<Document>("oauthConsent"),
   };
 }
 

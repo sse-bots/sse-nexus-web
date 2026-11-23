@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Activity,
   Bot,
@@ -51,7 +51,6 @@ interface MeUser {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [user, setUser] = useState<MeUser | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [dockOpen, setDockOpen] = useState(false);
@@ -81,13 +80,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    fetch("/api/me", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
+    fetch("/api/me", { cache: "no-store", credentials: "include" })
+      .then(async (r) => {
+        if (!r.ok) return;
+        const d = await r.json();
         if (d.authenticated && d.user) setUser(d.user);
         else setUser(null);
       })
-      .catch(() => setUser(null))
+      .catch(() => {
+        // Keep current session state on transient network errors
+      })
       .finally(() => setLoaded(true));
   }, [pathname]);
 
@@ -111,11 +113,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function handleSignOut() {
-    await signOut();
-    setUser(null);
     setDockOpen(false);
-    router.push("/");
-    router.refresh();
+    try {
+      await signOut();
+    } finally {
+      setUser(null);
+      window.location.assign("/");
+    }
   }
 
   const primaryLinks = [
@@ -332,7 +336,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500"
             >
               <LogIn className="h-4 w-4" />
-              Sign in with Discord
+              Sign in with SSE
             </Link>
           )}
         </div>
@@ -484,7 +488,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           : user.isStaff
                             ? "Support Server Moderator"
                             : "Verified Member"
-                      : "Sign in with Discord to continue"}
+                      : "Sign in with SSE to continue"}
                   </div>
                 </div>
               </div>

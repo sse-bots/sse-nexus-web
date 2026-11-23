@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 import { getSessionContext } from "@/lib/permissions";
 import { getCollections } from "@/lib/mongodb";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const ctx = await getSessionContext();
   if (!ctx || !ctx.isStaff) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { bots, requests, keys, servers, oauthClients, announcementHistory } =
+  const { bots, requests, keys, servers, announcementHistory } =
     await getCollections();
 
   const [
@@ -17,7 +20,6 @@ export async function GET() {
     pendingRequests,
     unusedKeys,
     activeServers,
-    oauthClientCount,
     scheduledAnnouncements,
   ] = await Promise.all([
     bots.countDocuments({ status: "active" }),
@@ -25,7 +27,6 @@ export async function GET() {
     requests.countDocuments({ status: "pending" }),
     keys.countDocuments({ status: "unused" }),
     servers.countDocuments({ status: "active" }),
-    oauthClients.countDocuments({}),
     announcementHistory.countDocuments({ event_type: "scheduled_pending" }),
   ]);
 
@@ -35,7 +36,7 @@ export async function GET() {
     pendingRequests,
     unusedKeys,
     activeServers,
-    oauthClientCount,
+    oauthClientCount: 0,
     scheduledAnnouncements,
     isAdmin: ctx.isAdmin,
     isOwner: ctx.isOwner,
