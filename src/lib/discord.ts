@@ -342,42 +342,6 @@ export async function fetchSupportMemberAccess(
   } catch {
     return { inSupportGuild: false, roles: [], isSupportAdmin: false };
   }
-}> {
-  const token = (process.env.HUB_DISCORD_TOKEN || "").trim();
-  const supportGuildId = (process.env.HUB_SUPPORT_GUILD_ID || "").trim();
-  if (!token || !supportGuildId || !discordUserId) {
-    return { roles: [], isSupportAdmin: false };
-  }
-
-  try {
-    const [memberRes, guildMeta] = await Promise.all([
-      fetch(
-        `${DISCORD_API}/guilds/${supportGuildId}/members/${discordUserId}`,
-        {
-          headers: { Authorization: `Bot ${token}` },
-          cache: "no-store",
-        }
-      ),
-      getSupportGuildMeta(),
-    ]);
-
-    if (!memberRes.ok) {
-      return {
-        roles: [],
-        isSupportAdmin: guildMeta.ownerId === discordUserId,
-      };
-    }
-
-    const member = (await memberRes.json()) as { roles?: string[] };
-    const roles = Array.isArray(member.roles) ? member.roles.map(String) : [];
-    const isSupportAdmin =
-      guildMeta.ownerId === discordUserId ||
-      roles.some((rid) => guildMeta.adminRoleIds.has(rid));
-
-    return { roles, isSupportAdmin };
-  } catch {
-    return { roles: [], isSupportAdmin: false };
-  }
 }
 
 export async function fetchSupportGuildResources(forceRefresh = false): Promise<{
