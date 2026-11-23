@@ -1,5 +1,6 @@
-import { SupportGateCard } from "@/components/SupportGateCard";
 "use client";
+
+import { SupportGateCard } from "@/components/SupportGateCard";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
