@@ -1,3 +1,4 @@
+import { SupportGateCard } from "@/components/SupportGateCard";
 "use client";
 
 import { useEffect, useState } from "react";
@@ -35,6 +36,8 @@ export default function DashboardPage() {
   const [isBlacklisted, setIsBlacklisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [unauth, setUnauth] = useState(false);
+  const [gateReason, setGateReason] = useState<"not_in_server" | "missing_member_role" | null>(null);
+  const [supportInvite, setSupportInvite] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function loadServers(forceRefresh = false) {
@@ -48,6 +51,12 @@ export default function DashboardPage() {
         return;
       }
       const data = await res.json();
+      if (res.status === 403 && data.portalBlockReason) {
+        setGateReason(data.portalBlockReason);
+        setSupportInvite(data.supportInviteUrl || "");
+        return;
+      }
+      setGateReason(null);
       if (!res.ok) {
         setError(data.error || "Could not load your servers.");
         return;
@@ -64,6 +73,16 @@ export default function DashboardPage() {
   useEffect(() => {
     loadServers(false);
   }, []);
+
+  if (gateReason) {
+    return (
+      <SupportGateCard
+        reason={gateReason}
+        inviteUrl={supportInvite}
+        onRetry={() => loadServers(true)}
+      />
+    );
+  }
 
   if (unauth) {
     return (

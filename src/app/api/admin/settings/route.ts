@@ -52,6 +52,7 @@ export async function PUT(req: Request) {
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const allowedArrayFields = [
+    "member_role_ids",
     "moderator_role_ids",
     "manager_role_ids",
     "approval_role_ids",

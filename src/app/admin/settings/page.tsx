@@ -26,6 +26,11 @@ function intToHexColor(color: number): string | null {
 
 const MULTI_ROLE_FIELDS = [
   {
+    key: "member_role_ids",
+    label: "Portal Access Roles (Members)",
+    desc: "Users MUST be in the Support Server AND hold at least one of these roles to access SSE Nexus. Leave empty to allow any Support Server member.",
+  },
+  {
     key: "moderator_role_ids",
     label: "Moderators",
     desc: "Can review activation requests and manage server licenses in Hub & Web Admin.",

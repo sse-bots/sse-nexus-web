@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import crypto from "crypto";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getSessionContext } from "@/lib/permissions";
@@ -15,18 +16,48 @@ const createClientSchema = z.object({
   icon: z.string().url().optional().or(z.literal("")),
 });
 
+const patchClientSchema = z.object({
+  clientId: z.string().min(1),
+  name: z.string().min(2).max(100).optional(),
+  redirect_uris: z.array(z.string().url()).min(1).optional(),
+  scopes: z.array(z.string()).min(1).optional(),
+  skip_consent: z.boolean().optional(),
+  uri: z.string().url().optional().or(z.literal("")),
+  icon: z.string().url().optional().or(z.literal("")),
+  rotate_secret: z.boolean().optional(),
+  revoke_all_consents: z.boolean().optional(),
+});
+
+function hashClientSecret(secret: string): string {
+  // Matches Better Auth default SHA-256 base64url secret storage
+  return crypto.createHash("sha256").update(secret).digest("base64url");
+}
+
 export async function GET() {
   const ctx = await getSessionContext();
   if (!ctx || !ctx.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const { oauthClients } = await getCollections();
-  const rows = await oauthClients.find({}).sort({ createdAt: -1 }).toArray();
+  const { oauthClients, oauthConsents } = await getCollections();
+  const [rows, consentCounts] = await Promise.all([
+    oauthClients.find({}).sort({ createdAt: -1 }).toArray(),
+    oauthConsents
+      .aggregate([{ $group: { _id: "$clientId", count: { $sum: 1 } } }])
+      .toArray(),
+  ]);
+
+  const countMap = new Map(
+    consentCounts.map((c) => [String(c._id), Number(c.count)])
+  );
+
   return NextResponse.json({
     clients: rows.map((c) => {
       const clean = { ...c };
       delete clean.clientSecret;
-      return serializeDoc(clean);
+      return serializeDoc({
+        ...clean,
+        authorizedUserCount: countMap.get(String(c.clientId)) || 0,
+      });
     }),
   });
 }
@@ -93,6 +124,83 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function PATCH(req: Request) {
+  const ctx = await getSessionContext();
+  if (!ctx || !ctx.isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const parsed = patchClientSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid update payload.", details: parsed.error.issues },
+      { status: 400 }
+    );
+  }
+
+  const {
+    clientId,
+    name,
+    redirect_uris,
+    scopes,
+    skip_consent,
+    uri,
+    icon,
+    rotate_secret,
+    revoke_all_consents,
+  } = parsed.data;
+
+  const { oauthClients, oauthConsents } = await getCollections();
+  const existing = await oauthClients.findOne({ clientId });
+  if (!existing) {
+    return NextResponse.json(
+      { error: "OAuth client not found." },
+      { status: 404 }
+    );
+  }
+
+  if (revoke_all_consents) {
+    const del = await oauthConsents.deleteMany({ clientId });
+    return NextResponse.json({
+      ok: true,
+      revokedCount: del.deletedCount || 0,
+    });
+  }
+
+  const now = new Date();
+  const updates: Record<string, unknown> = {
+    updatedAt: now,
+  };
+
+  if (name !== undefined) updates.name = name.trim();
+  if (redirect_uris !== undefined) updates.redirectUris = redirect_uris;
+  if (scopes !== undefined) updates.scopes = scopes;
+  if (skip_consent !== undefined) updates.skipConsent = skip_consent;
+  if (uri !== undefined) updates.uri = uri || null;
+  if (icon !== undefined) updates.icon = icon || null;
+
+  let newSecret: string | null = null;
+  if (rotate_secret) {
+    if (existing.public || existing.tokenEndpointAuthMethod === "none") {
+      return NextResponse.json(
+        { error: "Public clients do not use a client secret." },
+        { status: 400 }
+      );
+    }
+    newSecret = `sse_sec_${crypto.randomBytes(32).toString("base64url")}`;
+    updates.clientSecret = hashClientSecret(newSecret);
+  }
+
+  await oauthClients.updateOne({ clientId }, { $set: updates });
+
+  return NextResponse.json({
+    ok: true,
+    client_id: clientId,
+    client_secret: newSecret,
+  });
 }
 
 export async function DELETE(req: Request) {

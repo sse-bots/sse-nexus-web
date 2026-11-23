@@ -23,13 +23,13 @@ const ADMIN_LINKS: Array<{
   minRole: RoleLevel;
 }> = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, minRole: "staff" },
-  { href: "/admin/requests", label: "Requests Queue", icon: Inbox, minRole: "staff" },
-  { href: "/admin/servers", label: "Server Licenses", icon: Server, minRole: "staff" },
+  { href: "/admin/requests", label: "Requests", icon: Inbox, minRole: "staff" },
+  { href: "/admin/servers", label: "Licenses", icon: Server, minRole: "staff" },
   { href: "/admin/bots", label: "Bots & Status", icon: Bot, minRole: "admin" },
-  { href: "/admin/oauth-clients", label: "SSO / OAuth Apps", icon: Globe, minRole: "admin" },
-  { href: "/admin/keys", label: "Activation Keys", icon: KeyRound, minRole: "owner" },
+  { href: "/admin/oauth-clients", label: "SSO / OAuth", icon: Globe, minRole: "admin" },
+  { href: "/admin/keys", label: "Keys", icon: KeyRound, minRole: "owner" },
   { href: "/admin/announcements", label: "Announcements", icon: Megaphone, minRole: "owner" },
-  { href: "/admin/settings", label: "Hub Settings & Logs", icon: Settings, minRole: "owner" },
+  { href: "/admin/settings", label: "Hub Settings", icon: Settings, minRole: "owner" },
 ];
 
 function hasRole(minRole: RoleLevel, isAdmin: boolean, isOwner: boolean): boolean {
@@ -60,47 +60,30 @@ export function AdminShell({
     : isOwner;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
-      <aside className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 lg:sticky lg:top-24 lg:self-start">
-        <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            SSE Hub Admin
-          </span>
-          <span
-            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-              isOwner
-                ? "bg-amber-500/20 text-amber-300"
-                : isAdmin
-                  ? "bg-violet-500/20 text-violet-300"
-                  : "bg-indigo-500/20 text-indigo-300"
-            }`}
-          >
-            {isOwner ? "OWNER" : isAdmin ? "ADMIN" : "MOD"}
-          </span>
-        </div>
-        <nav className="space-y-1">
-          {visibleLinks.map(({ href, label, icon: Icon }) => {
-            const active =
-              href === "/admin"
-                ? pathname === "/admin"
-                : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  active
-                    ? "bg-indigo-600/20 text-indigo-300"
-                    : "text-slate-300 hover:bg-slate-800/70 hover:text-white"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
+    <div className="space-y-6">
+      {/* Compact horizontal quick-tabs for admin subpages */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        {visibleLinks.map(({ href, label, icon: Icon }) => {
+          const active =
+            href === "/admin"
+              ? pathname === "/admin"
+              : pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
+                active
+                  ? "border-indigo-500 bg-indigo-600/20 text-indigo-300"
+                  : "border-slate-800 bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </Link>
+          );
+        })}
+      </div>
 
       <div className="min-w-0">
         {authorizedForCurrentRoute ? (

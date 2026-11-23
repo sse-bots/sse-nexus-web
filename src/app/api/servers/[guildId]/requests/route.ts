@@ -23,6 +23,19 @@ export async function POST(
   if (!ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (!ctx.canAccessPortal) {
+    return NextResponse.json(
+      {
+        error:
+          ctx.portalBlockReason === "missing_member_role"
+            ? "You must hold the required Member role in the SSE Support Server to use this portal."
+            : "You must join the SSE Support Server before using this portal.",
+        portalBlockReason: ctx.portalBlockReason,
+        supportInviteUrl: ctx.supportInviteUrl,
+      },
+      { status: 403 }
+    );
+  }
   if (ctx.isBlacklisted) {
     return NextResponse.json(
       {
@@ -240,6 +253,19 @@ export async function DELETE(
   const ctx = await getSessionContext();
   if (!ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!ctx.canAccessPortal) {
+    return NextResponse.json(
+      {
+        error:
+          ctx.portalBlockReason === "missing_member_role"
+            ? "You must hold the required Member role in the SSE Support Server to use this portal."
+            : "You must join the SSE Support Server before using this portal.",
+        portalBlockReason: ctx.portalBlockReason,
+        supportInviteUrl: ctx.supportInviteUrl,
+      },
+      { status: 403 }
+    );
   }
   const { guildId } = await context.params;
   const { searchParams } = new URL(req.url);
