@@ -7,6 +7,7 @@
   --accent-on-solid: #ffffff;
   --accent-glow: rgba(34, 197, 94, 0.28);
   --accent-soft: rgba(34, 197, 94, 0.14);
+  --accent-hero-tint: rgba(34, 197, 94, 0.18);
   --accent-border: rgba(34, 197, 94, 0.45);
 
   --surface-bg: #070b14;
@@ -14,6 +15,7 @@
   --surface-card: #0f172a;
   --surface-input: #090f1d;
   --surface-muted: #1e293b;
+  --surface-hover: #263449;
   --surface-border: #1e293b;
 
   --app-font: 'Public Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -38,7 +40,9 @@ html.light body {
   color: #0f172a;
 }
 
-/* Neutral surface mapping across Dark & Light modes (Slate, Gray, Zinc, Neutral, Stone, Taupe, Mauve, Mist, Olive) */
+/* ==========================================================================
+   1. Neutral Surface Mapping (All 9 Nuxt UI Neutrals in Dark & Light Modes)
+   ========================================================================== */
 .bg-\[\#07090e\] {
   background-color: var(--surface-bg) !important;
 }
@@ -46,9 +50,10 @@ html.light body {
 .bg-\[\#0a0d14\]\/85,
 .bg-\[\#0b0e16\],
 .bg-\[\#0b1120\],
-.bg-\[\#0e1320\] {
-  background-color: var(--surface-sidebar) !important;
-}
+.bg-\[\#0c0f17\],
+.bg-\[\#0c0f17\]\/90,
+.bg-\[\#0d111a\]\/95,
+.bg-\[\#0e1320\],
 .bg-\[\#111520\]\/95 {
   background-color: var(--surface-sidebar) !important;
 }
@@ -74,7 +79,9 @@ html.light body {
 .bg-slate-800,
 .bg-slate-800\/70,
 .bg-slate-800\/80,
-.bg-slate-800\/90 {
+.bg-slate-800\/90,
+.bg-slate-700,
+.bg-slate-700\/80 {
   background-color: var(--surface-muted) !important;
 }
 .border-slate-800,
@@ -82,11 +89,66 @@ html.light body {
 .border-slate-800\/90,
 .border-slate-700,
 .border-slate-700\/80,
-.border-slate-700\/90 {
+.border-slate-700\/90,
+.border-slate-600 {
+  border-color: var(--surface-border) !important;
+}
+.border-\[\#0c0f17\] {
+  border-color: var(--surface-card) !important;
+}
+.divide-slate-800 > :not(:last-child) {
   border-color: var(--surface-border) !important;
 }
 
-/* Clean light-mode typography */
+/* Interactive surface hovers */
+.hover\:bg-slate-900:hover,
+.hover\:bg-slate-900\/80:hover {
+  background-color: var(--surface-card) !important;
+}
+.hover\:bg-slate-800:hover,
+.hover\:bg-slate-800\/60:hover,
+.hover\:bg-slate-800\/70:hover,
+.hover\:bg-slate-800\/80:hover,
+.hover\:bg-slate-700:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+/* ==========================================================================
+   2. Adaptive Hero, Spotlight, & Brand Gradients (Fixes Dark Boxes in Light Mode)
+   ========================================================================== */
+.bg-gradient-to-br.from-slate-900,
+.bg-gradient-to-br.from-slate-900\/90,
+.bg-gradient-to-br.from-indigo-950\/60 {
+  background-image: linear-gradient(
+    135deg,
+    var(--surface-card) 0%,
+    var(--surface-input) 58%,
+    var(--accent-hero-tint) 100%
+  ) !important;
+}
+
+.bg-gradient-to-br.from-emerald-950\/30 {
+  background-image: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.12) 0%,
+    var(--surface-card) 58%,
+    var(--surface-input) 100%
+  ) !important;
+}
+
+/* Brand "SSE" Logo Square Badge (works cleanly in Tailwind v4 + Light & Dark) */
+.bg-gradient-to-br.from-indigo-500.to-violet-600 {
+  background-image: linear-gradient(
+    135deg,
+    var(--accent-500) 0%,
+    var(--accent-600) 100%
+  ) !important;
+  color: var(--accent-on-solid) !important;
+}
+
+/* ==========================================================================
+   3. Light Mode Typography & High-Contrast Semantic Colors
+   ========================================================================== */
 html.light .text-white {
   color: #0f172a !important;
 }
@@ -101,15 +163,110 @@ html.light .text-slate-400,
 html.light .text-slate-500 {
   color: #64748b !important;
 }
+html.light .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+html.light .hover\:text-slate-300:hover {
+  color: #0f172a !important;
+}
 
-/* Primary Accent Remapping (all 18 Nuxt UI Primary Colors) */
+/* Make pastel status text crisp & accessible on white/light backgrounds */
+html.light .text-emerald-100,
+html.light .text-emerald-200,
+html.light .text-emerald-200\/80,
+html.light .text-emerald-300 {
+  color: #047857 !important;
+}
+html.light .text-emerald-400 {
+  color: #059669 !important;
+}
+html.light .text-rose-200,
+html.light .text-rose-200\/80,
+html.light .text-rose-300,
+html.light .hover\:text-rose-300:hover {
+  color: #be123c !important;
+}
+html.light .text-rose-400 {
+  color: #e11d48 !important;
+}
+html.light .text-amber-100,
+html.light .text-amber-200,
+html.light .text-amber-300,
+html.light .hover\:text-amber-200:hover {
+  color: #b45309 !important;
+}
+html.light .text-amber-400 {
+  color: #d97706 !important;
+}
+html.light .text-orange-200,
+html.light .text-orange-300 {
+  color: #c2410c !important;
+}
+html.light .text-orange-400 {
+  color: #ea580c !important;
+}
+html.light .text-sky-300 {
+  color: #0369a1 !important;
+}
+html.light .text-sky-400 {
+  color: #0284c7 !important;
+}
+html.light .text-violet-300 {
+  color: #6d28d9 !important;
+}
+html.light .text-violet-400 {
+  color: #7c3aed !important;
+}
+
+/* Soft floating dock & card elevation in Light Mode */
+html.light .shadow-\[0_10px_35px_rgba\(0\,0\,0\,0\.65\)\] {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14) !important;
+}
+html.light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+/* ==========================================================================
+   4. Primary Accent Mapping & Solid Button Text Contrast (Higher Specificity)
+   ========================================================================== */
 .bg-indigo-600 {
   background-color: var(--accent-600) !important;
   color: var(--accent-on-solid) !important;
 }
+.bg-indigo-500 {
+  background-color: var(--accent-500) !important;
+}
 .hover\:bg-indigo-500:hover {
   background-color: var(--accent-500) !important;
 }
+.hover\:bg-indigo-600:hover {
+  background-color: var(--accent-600) !important;
+  color: var(--accent-on-solid) !important;
+}
+
+/* Preserve crisp button & badge text color on solid backgrounds in BOTH modes */
+html.light .bg-indigo-600,
+html.light .bg-indigo-600 *,
+html.dark .bg-indigo-600,
+html.dark .bg-indigo-600 *,
+html.light .bg-gradient-to-br.from-indigo-500.to-violet-600,
+html.light .bg-gradient-to-br.from-indigo-500.to-violet-600 *,
+html.dark .bg-gradient-to-br.from-indigo-500.to-violet-600,
+html.dark .bg-gradient-to-br.from-indigo-500.to-violet-600 * {
+  color: var(--accent-on-solid) !important;
+}
+
+html.light .bg-emerald-600,
+html.light .bg-emerald-600 *,
+html.light .bg-rose-600,
+html.light .bg-rose-600 *,
+html.light .bg-rose-600\/90,
+html.light .bg-rose-600\/90 *,
+html.light .bg-\[\#5865F2\],
+html.light .bg-\[\#5865F2\] * {
+  color: #ffffff !important;
+}
+
 .text-indigo-400,
 .text-indigo-300 {
   color: var(--accent-400) !important;
@@ -117,6 +274,7 @@ html.light .text-slate-500 {
 .bg-indigo-500\/10,
 .bg-indigo-500\/15,
 .bg-indigo-500\/20,
+.bg-indigo-600\/15,
 .bg-indigo-600\/20 {
   background-color: var(--accent-soft) !important;
 }
@@ -130,11 +288,9 @@ html.light .text-slate-500 {
 .hover\:border-indigo-500\/60:hover {
   border-color: var(--accent-border) !important;
 }
-.from-indigo-500 {
-  --tw-gradient-from: var(--accent-500) var(--tw-gradient-from-position) !important;
-}
-.to-violet-600 {
-  --tw-gradient-to: var(--accent-600) var(--tw-gradient-to-position) !important;
+.border-t-indigo-400,
+.border-t-indigo-500 {
+  border-top-color: var(--accent-500) !important;
 }
 .shadow-indigo-500\/20,
 .shadow-indigo-500\/25,
@@ -142,7 +298,9 @@ html.light .text-slate-500 {
   --tw-shadow-color: var(--accent-glow) !important;
 }
 
-/* Dynamic Border Radius scaling (Nuxt UI Radius selector: 0rem -> 0.75rem) */
+/* ==========================================================================
+   5. Dynamic Border Radius Scaling (Nuxt UI Radius selector: 0rem -> 0.75rem)
+   ========================================================================== */
 .rounded-lg {
   border-radius: calc(var(--app-radius) * 0.85) !important;
 }
@@ -156,7 +314,9 @@ html.light .text-slate-500 {
   border-radius: calc(var(--app-radius) * 2.25) !important;
 }
 
-/* Smooth Spring Sheet & Menu Animations */
+/* ==========================================================================
+   6. Smooth Spring Sheet & Menu Animations
+   ========================================================================== */
 @keyframes sheetBackdropIn {
   from {
     opacity: 0;
