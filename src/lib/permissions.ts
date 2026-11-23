@@ -2,7 +2,10 @@ import { headers } from "next/headers";
 import type { Document, Filter } from "mongodb";
 import { auth } from "./auth";
 import { getCollections, userIdFilter } from "./mongodb";
-import { fetchSupportMemberAccess } from "./discord";
+import {
+  buildSupportServerInviteUrl,
+  fetchSupportMemberAccess,
+} from "./discord";
 
 export interface SessionContext {
   userId: string;
@@ -17,6 +20,12 @@ export interface SessionContext {
   isAdmin: boolean;
   /** Hub Owner OR Support Server Admin OR Support Server Moderator */
   isStaff: boolean;
+  /** Support Server membership & required Member Role verification */
+  inSupportGuild: boolean;
+  hasRequiredMemberRole: boolean;
+  canAccessPortal: boolean;
+  portalBlockReason: "not_in_server" | "missing_member_role" | null;
+  supportInviteUrl: string;
   isBlacklisted: boolean;
   blacklistedRoleIds: string[];
   supportRoles: string[];
@@ -55,7 +64,11 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     supportGuildId ? guildSettings.findOne({ guild_id: supportGuildId }) : null,
     discordId
       ? fetchSupportMemberAccess(discordId)
-      : Promise.resolve({ roles: [], isSupportAdmin: false }),
+      : Promise.resolve({
+          inSupportGuild: false,
+          roles: [],
+          isSupportAdmin: false,
+        }),
   ]);
 
   const modRoleIds = new Set<string>(
@@ -64,13 +77,32 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   const blockedRoleIds = new Set<string>(
     ((cfg?.blacklisted_role_ids as string[]) || []).map(String)
   );
+  const requiredMemberRoleIds = new Set<string>(
+    ((cfg?.member_role_ids as string[]) || []).map(String)
+  );
 
   const supportRoles = supportAccess.roles;
+  const inSupportGuild = supportAccess.inSupportGuild;
   const isSupportAdmin = supportAccess.isSupportAdmin;
   const isSupportMod = supportRoles.some((roleId) => modRoleIds.has(roleId));
   const isAdmin = isOwner || isSupportAdmin;
   const isStaff = isAdmin || isSupportMod;
 
+  // Enforce Support Server membership + configured member_role_ids (unless Hub Owner / Staff)
+  const hasRequiredMemberRole =
+    requiredMemberRoleIds.size === 0 ||
+    supportRoles.some((roleId) => requiredMemberRoleIds.has(roleId));
+
+  let portalBlockReason: "not_in_server" | "missing_member_role" | null = null;
+  if (supportGuildId && !isStaff) {
+    if (!inSupportGuild) {
+      portalBlockReason = "not_in_server";
+    } else if (!hasRequiredMemberRole) {
+      portalBlockReason = "missing_member_role";
+    }
+  }
+
+  const canAccessPortal = portalBlockReason === null;
   const matchedBlocked = supportRoles.filter((roleId) =>
     blockedRoleIds.has(roleId)
   );
@@ -86,8 +118,13 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     isSupportMod,
     isAdmin,
     isStaff,
+    inSupportGuild,
+    hasRequiredMemberRole,
+    canAccessPortal,
+    portalBlockReason,
+    supportInviteUrl: buildSupportServerInviteUrl(),
     isBlacklisted: !isAdmin && matchedBlocked.length > 0,
     blacklistedRoleIds: matchedBlocked,
     supportRoles,
   };
-    }
+}

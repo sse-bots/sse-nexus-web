@@ -18,6 +18,19 @@ export async function GET(
   if (!ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (!ctx.canAccessPortal) {
+    return NextResponse.json(
+      {
+        error:
+          ctx.portalBlockReason === "missing_member_role"
+            ? "You must hold the required Member role in the SSE Support Server to use this portal."
+            : "You must join the SSE Support Server before using this portal.",
+        portalBlockReason: ctx.portalBlockReason,
+        supportInviteUrl: ctx.supportInviteUrl,
+      },
+      { status: 403 }
+    );
+  }
 
   const { guildId } = await context.params;
   if (!/^\d{17,20}$/.test(guildId)) {
