@@ -111,6 +111,7 @@ export const auth = betterAuth({
           providerId: "sse",
           clientId: (process.env.SSE_CLIENT_ID || "").trim(),
           clientSecret: (process.env.SSE_CLIENT_SECRET || "").trim(),
+          authentication: "basic",
           discoveryUrl: `${sseIssuerUrl}/.well-known/openid-configuration`,
           authorizationUrl: `${sseIssuerUrl}/api/auth/oauth2/authorize`,
           tokenUrl: `${sseIssuerUrl}/api/auth/oauth2/token`,
@@ -137,7 +138,9 @@ export const auth = betterAuth({
               name: String(
                 p.name || p.preferred_username || p.email || "SSE User"
               ),
-              email: String(p.email || `${String(p.sub || "user")}@sse-world.local`),
+              email: String(
+                p.email || `${String(p.sub || "user")}@sse-world.local`
+              ),
               image: picture,
               discordId:
                 typeof p.discord_id === "string" ? p.discord_id : undefined,
