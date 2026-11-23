@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" data-accent="indigo">
+    <html lang="en" className="dark" data-primary="green" data-neutral="slate">
       <body className="min-h-screen bg-[#07090e] text-slate-100 antialiased">
         <GlobalNetworkMonitor />
         <AppShell>{children}</AppShell>
