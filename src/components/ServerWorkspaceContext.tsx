@@ -147,9 +147,10 @@ export function ServerWorkspaceProvider({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gateReason, setGateReason] = useState<
-    "not_in_server" | "missing_member_role" | null
+    "discord_not_linked" | "not_in_server" | "missing_member_role" | null
   >(null);
   const [supportInvite, setSupportInvite] = useState("");
+  const [accountsUrl, setAccountsUrl] = useState("");
   const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(
     null
   );
@@ -174,6 +175,7 @@ export function ServerWorkspaceProvider({
         if (res.status === 403 && j.portalBlockReason) {
           setGateReason(j.portalBlockReason);
           setSupportInvite(j.supportInviteUrl || "");
+          setAccountsUrl(j.accountsUrl || "");
           return;
         }
         setGateReason(null);
@@ -201,6 +203,7 @@ export function ServerWorkspaceProvider({
       <SupportGateCard
         reason={gateReason}
         inviteUrl={supportInvite}
+        accountsUrl={accountsUrl}
         onRetry={() => load(false)}
       />
     );

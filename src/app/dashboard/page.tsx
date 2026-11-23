@@ -37,7 +37,8 @@ export default function DashboardPage() {
   const [isBlacklisted, setIsBlacklisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [unauth, setUnauth] = useState(false);
-  const [gateReason, setGateReason] = useState<"not_in_server" | "missing_member_role" | null>(null);
+  const [gateReason, setGateReason] = useState<"discord_not_linked" | "not_in_server" | "missing_member_role" | null>(null);
+  const [accountsUrl, setAccountsUrl] = useState("");
   const [supportInvite, setSupportInvite] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +56,7 @@ export default function DashboardPage() {
       if (res.status === 403 && data.portalBlockReason) {
         setGateReason(data.portalBlockReason);
         setSupportInvite(data.supportInviteUrl || "");
+        setAccountsUrl(data.accountsUrl || "");
         return;
       }
       setGateReason(null);
@@ -80,6 +82,7 @@ export default function DashboardPage() {
       <SupportGateCard
         reason={gateReason}
         inviteUrl={supportInvite}
+        accountsUrl={accountsUrl}
         onRetry={() => loadServers(true)}
       />
     );
@@ -93,14 +96,14 @@ export default function DashboardPage() {
           Sign in to view your servers
         </h1>
         <p className="mt-2 text-sm text-slate-400">
-          Connect your Discord account to manage SSE Nexus and request bot
+          Sign in with your central SSE Account to manage SSE Nexus and request bot
           activations.
         </p>
         <Link
           href="/sign-in?next=/dashboard"
           className="mt-5 inline-block rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
         >
-          Sign in with Discord
+          Sign in with SSE Accounts
         </Link>
       </div>
     );

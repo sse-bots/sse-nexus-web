@@ -17,11 +17,14 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         error:
-          ctx.portalBlockReason === "missing_member_role"
-            ? "You must hold the required Member role in the SSE Support Server to use this portal."
-            : "You must join the SSE Support Server before using this portal.",
+          ctx.portalBlockReason === "discord_not_linked"
+            ? "Link your Discord account on SSE Accounts before using SSE Nexus."
+            : ctx.portalBlockReason === "missing_member_role"
+              ? "You must hold the required Member role in the SSE Support Server to use this portal."
+              : "You must join the SSE Support Server before using this portal.",
         portalBlockReason: ctx.portalBlockReason,
         supportInviteUrl: ctx.supportInviteUrl,
+        accountsUrl: ctx.accountsUrl,
       },
       { status: 403 }
     );

@@ -1,10 +1,9 @@
-import { oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider";
-import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { getSseIssuerUrl } from "@/lib/sse-sso";
 
-const handler = oauthProviderAuthServerMetadata(auth as never, {
-  headers: {
-    "Access-Control-Allow-Origin": "*",
-  },
-});
-
-export const GET = (request: Request) => handler(request);
+export async function GET() {
+  return NextResponse.redirect(
+    `${getSseIssuerUrl()}/.well-known/oauth-authorization-server`,
+    307
+  );
+}

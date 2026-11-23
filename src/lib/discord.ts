@@ -1,4 +1,4 @@
-import { getCollections, userIdFilter } from "./mongodb";
+import { getCollections } from "./mongodb";
 
 const DISCORD_API = "https://discord.com/api/v10";
 
@@ -171,84 +171,12 @@ export async function getNexusPresentGuildIds(
   return new Set(ids);
 }
 
-async function getValidUserDiscordAccessToken(
-  userId: string
-): Promise<string | null> {
-  const { authAccounts } = await getCollections();
-  const account = await authAccounts.findOne({
-    userId: userIdFilter(userId),
-    providerId: "discord",
-  });
-  if (!account) return null;
-
-  const accessToken = account.accessToken as string | undefined;
-  const refreshToken = account.refreshToken as string | undefined;
-  const expiresAt = account.accessTokenExpiresAt
-    ? new Date(account.accessTokenExpiresAt as string | Date).getTime()
-    : 0;
-
-  if (accessToken && (!expiresAt || expiresAt > Date.now() + 60_000)) {
-    return accessToken;
-  }
-
-  if (
-    !refreshToken ||
-    !process.env.DISCORD_CLIENT_ID ||
-    !process.env.DISCORD_CLIENT_SECRET
-  ) {
-    return accessToken || null;
-  }
-
-  try {
-    const body = new URLSearchParams({
-      client_id: process.env.DISCORD_CLIENT_ID,
-      client_secret: process.env.DISCORD_CLIENT_SECRET,
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-    });
-    const res = await fetch(`${DISCORD_API}/oauth2/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
-      cache: "no-store",
-    });
-    if (!res.ok) return accessToken || null;
-    const tokenData = (await res.json()) as {
-      access_token: string;
-      refresh_token?: string;
-      expires_in: number;
-    };
-    await authAccounts.updateOne(
-      { _id: account._id },
-      {
-        $set: {
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token || refreshToken,
-          accessTokenExpiresAt: new Date(
-            Date.now() + tokenData.expires_in * 1000
-          ),
-          updatedAt: new Date(),
-        },
-      }
-    );
-    return tokenData.access_token;
-  } catch {
-    return accessToken || null;
-  }
-}
-
 export async function fetchUserDiscordGuilds(
   userId: string
 ): Promise<RawDiscordGuild[]> {
-  const token = await getValidUserDiscordAccessToken(userId);
-  if (!token) return [];
-  const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data) ? (data as RawDiscordGuild[]) : [];
+  const { fetchDiscordGuildsViaSseAccounts } = await import("./sse-sso");
+  const result = await fetchDiscordGuildsViaSseAccounts(userId);
+  return result.guilds;
 }
 
 async function getSupportGuildMeta(): Promise<{
